@@ -9,8 +9,6 @@ MotilityJ is an application for the segmentation of motility images.
 
 ## Installation
 
-### Python package
-
 In order to use MotilityJ, it is necessary to install the following Python package [Deep-Motility](https://pypi.org/project/Deep-Motility). You need to use `pip`:
 
 For installing it in Ubuntu use:
