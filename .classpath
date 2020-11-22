@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="lib" path="/home/jonathan/Escritorio/fiji-linux64/Fiji.app/jars/swingx-1.6.1.jar"/>
+	<classpathentry kind="lib" path="/home/jonathan/git/prueba/deps/ij-1.53f.jar"/>
+	<classpathentry kind="lib" path="/home/jonathan/git/prueba/deps/bioformats_package.jar"/>
+	<classpathentry kind="lib" path="/home/jonathan/git/prueba/deps/Fiji_Plugins-3.1.1.jar"/>
+	<classpathentry kind="lib" path="/home/jonathan/git/prueba/deps/fiji-2.1.1.jar"/>
+	<classpathentry kind="lib" path="/home/jonathan/git/prueba/deps/fiji-compat-0.0.0-STUB.jar"/>
+	<classpathentry kind="lib" path="/home/jonathan/git/prueba/deps/fiji-lib-2.1.2.jar"/>
+	<classpathentry kind="lib" path="/home/jonathan/git/prueba/deps/Auto_Local_Threshold-1.10.1.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
