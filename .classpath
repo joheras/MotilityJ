@@ -6,13 +6,15 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="src" path="icons"/>
 	<classpathentry kind="lib" path="/home/jonathan/Escritorio/fiji-linux64/Fiji.app/jars/swingx-1.6.1.jar"/>
-	<classpathentry kind="lib" path="/home/jonathan/git/prueba/deps/ij-1.53f.jar"/>
-	<classpathentry kind="lib" path="/home/jonathan/git/prueba/deps/bioformats_package.jar"/>
-	<classpathentry kind="lib" path="/home/jonathan/git/prueba/deps/Fiji_Plugins-3.1.1.jar"/>
-	<classpathentry kind="lib" path="/home/jonathan/git/prueba/deps/fiji-2.1.1.jar"/>
-	<classpathentry kind="lib" path="/home/jonathan/git/prueba/deps/fiji-compat-0.0.0-STUB.jar"/>
-	<classpathentry kind="lib" path="/home/jonathan/git/prueba/deps/fiji-lib-2.1.2.jar"/>
-	<classpathentry kind="lib" path="/home/jonathan/git/prueba/deps/Auto_Local_Threshold-1.10.1.jar"/>
+	<classpathentry kind="lib" path="/home/jonathan/git/MotilityJ/deps/Auto_Local_Threshold-1.10.1.jar"/>
+	<classpathentry kind="lib" path="/home/jonathan/git/MotilityJ/deps/bioformats_package.jar"/>
+	<classpathentry kind="lib" path="/home/jonathan/git/MotilityJ/deps/fiji-2.1.1.jar"/>
+	<classpathentry kind="lib" path="/home/jonathan/git/MotilityJ/deps/fiji-compat-0.0.0-STUB.jar"/>
+	<classpathentry kind="lib" path="/home/jonathan/git/MotilityJ/deps/fiji-lib-2.1.2.jar"/>
+	<classpathentry kind="lib" path="/home/jonathan/git/MotilityJ/deps/Fiji_Plugins-3.1.1.jar"/>
+	<classpathentry kind="lib" path="/home/jonathan/git/MotilityJ/deps/ij-1.53f.jar"/>
+	<classpathentry kind="lib" path="/home/jonathan/git/MotilityJ/deps/loci_plugins-4.4.12.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -234,7 +234,7 @@ public class MainGUI extends JFrame implements KeyListener {
 			public void actionPerformed(ActionEvent arg0) {
 			}
 		});
-		btnNewButton.setIcon(new ImageIcon("icons/folder.png"));
+		btnNewButton.setIcon(new ImageIcon(MainGUI.class.getResource("/icons/folder.png")));
 		btnNewButton.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
@@ -246,7 +246,7 @@ public class MainGUI extends JFrame implements KeyListener {
 		toolBar.add(btnNewButton);
 
 		btnClose = new JButton("");
-		btnClose.setIcon(new ImageIcon("icons/cancel.png"));
+		btnClose.setIcon(new ImageIcon(MainGUI.class.getResource("/icons/cancel.png")));
 		btnClose.setToolTipText("Close current experiment");
 		btnClose.addMouseListener(new MouseAdapter() {
 			@Override
@@ -260,7 +260,7 @@ public class MainGUI extends JFrame implements KeyListener {
 		toolBar.add(btnClose);
 
 		btnDetection = new JButton("");
-		btnDetection.setIcon(new ImageIcon("icons/computer.png"));
+		btnDetection.setIcon(new ImageIcon(MainGUI.class.getResource("/icons/computer.png")));
 		btnDetection.setToolTipText("Analyse the images of the experiment");
 		btnDetection.addMouseListener(new MouseAdapter() {
 			@Override
@@ -290,7 +290,7 @@ public class MainGUI extends JFrame implements KeyListener {
 				setFocusTraversalKeysEnabled(false);
 			}
 		});
-		btnNewButton_5.setIcon(new ImageIcon("icons/settings.png"));
+		btnNewButton_5.setIcon(new ImageIcon(MainGUI.class.getResource("/icons/settings.png")));
 		toolBar.add(btnNewButton_5);
 
 		btnExcel = new JButton("");
@@ -301,7 +301,7 @@ public class MainGUI extends JFrame implements KeyListener {
 			}
 		});
 		btnExcel.setToolTipText("Export to excel");
-		btnExcel.setIcon(new ImageIcon("icons/excel-file.png"));
+		btnExcel.setIcon(new ImageIcon(MainGUI.class.getResource("/icons/excel-file.png")));
 		btnExcel.setEnabled(false);
 		toolBar.add(btnExcel);
 
@@ -433,7 +433,7 @@ public class MainGUI extends JFrame implements KeyListener {
 			}
 		});
 
-		btnNewButton_7.setIcon(new ImageIcon("icons/zoom_in1.png"));
+		btnNewButton_7.setIcon(new ImageIcon(MainGUI.class.getResource("/icons/zoom_in1.png")));
 		toolBar_1.add(btnNewButton_7);
 
 		btnNewButton_8 = new JButton("");
@@ -452,11 +452,11 @@ public class MainGUI extends JFrame implements KeyListener {
 			}
 		});
 		btnNewButton_8.setToolTipText("zoom out");
-		btnNewButton_8.setIcon(new ImageIcon("icons/zoom_out.png"));
+		btnNewButton_8.setIcon(new ImageIcon(MainGUI.class.getResource("/icons/zoom_out.png")));
 		toolBar_1.add(btnNewButton_8);
 
 		btnEdit = new JButton("");
-		btnEdit.setIcon(new ImageIcon("icons/edit.png"));
+		btnEdit.setIcon(new ImageIcon(MainGUI.class.getResource("/icons/edit.png")));
 		btnEdit.setToolTipText("Edit the current selection");
 		btnEdit.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
@@ -467,7 +467,7 @@ public class MainGUI extends JFrame implements KeyListener {
 		toolBar_1.add(btnEdit);
 
 		btnChangeClass = new JButton("");
-		btnChangeClass.setIcon(new ImageIcon("icons/exchange.png"));
+		btnChangeClass.setIcon(new ImageIcon(MainGUI.class.getResource("/icons/exchange.png")));
 		btnChangeClass.setToolTipText("Change from complete to incomplete (and viceversa)");
 		btnChangeClass.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {

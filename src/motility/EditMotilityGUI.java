@@ -143,9 +143,11 @@ public class EditMotilityGUI extends JFrame {
 					rm.select(0);
 					IJ.run(imp, "Make Inverse", "");
 					rm.addRoi(imp.getRoi());
-					rm.select(0);
+					
+					// This is a bit strange
+					/*rm.select(0);
 					rm.runCommand(imp, "Delete");
-					rm.select(0);
+					rm.select(0);*/
 				} else {
 					final JPanel panel = new JPanel();
 					JOptionPane.showMessageDialog(panel, "Select a region to remove from the current roi", "Add region",
@@ -168,8 +170,10 @@ public class EditMotilityGUI extends JFrame {
 					rm.select(0);
 					rm.runCommand(imp, "Delete");
 					rm.select(0);
-					rm.runCommand(imp, "Delete");
-					rm.select(0);
+					
+					//This is a bit strange
+					/*rm.runCommand(imp, "Delete");
+					rm.select(0);*/
 				} else {
 					final JPanel panel = new JPanel();
 					JOptionPane.showMessageDialog(panel, "Select a region to add to the current roi", "Remove region",
@@ -280,7 +284,7 @@ public class EditMotilityGUI extends JFrame {
 		imp.show();
 		Opener o = new Opener();
 		rm = new RoiManager();
-		rm.setBounds(0, 0, 0, 0);
+		//rm.setBounds(0, 0, 0, 0);
 
 		if ((new File(path + "/preds/" + name + ".zip")).exists()) {
 			o.openZip(path + "/preds/" + name + ".zip");
@@ -289,7 +293,7 @@ public class EditMotilityGUI extends JFrame {
 			// rm.addRoi(imp2.getRoi());
 			rm.runCommand(imp, "Show All");
 
-			rm.setVisible(false);
+			//rm.setVisible(false);
 			btnAddROI.setEnabled(false);
 		} else {
 			btnDeleteRoi.setEnabled(false);
