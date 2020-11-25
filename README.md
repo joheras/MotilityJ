@@ -19,7 +19,7 @@ pip3 install Deep-Motility
 For installing it in Windows, you need to manually install the Pytorch library:
 
 ```bash
-pip install torch===1.6.0 torchvision===0.7.0 -f https://download.pytorch.org/whl/torch_stable.html
+pip install torch===1.7.0 torchvision===0.8.0 -f https://download.pytorch.org/whl/torch_stable.html
 pip install Deep-Motility
 ```
 All the code from this package is located in it is own repository [Deep-Motility](https://github.com/joheras/Deep-Motility).
