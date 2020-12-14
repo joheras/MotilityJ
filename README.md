@@ -5,7 +5,11 @@ MotilityJ is an application for the segmentation of motility images.
 ## Table of contents
 
 1. [Installation](#installation)
-2. [Acknowledgments](#Acknowledgments)
+2. [Video](#video)
+3. [Models](#models)
+4. [Motility plugin](#motility-plugin)
+5. [Comparison application](#comparison-application)
+6. [Acknowledgments](#Acknowledgments)
 
 ## Installation
 
@@ -33,7 +37,21 @@ All the code from this package is located in it is own repository [Deep-Motility
 
 Once that you have installed the Python package, you need to download the [Java application](https://github.com/joheras/MotilityJ/releases/download/v0.1/Motilidad.jar). You may need to install [Java](https://www.java.com/es/download/).
 
+## Video
 
+You can see how to use MotilityJ in the following video.
+
+## Models
+
+MotilityJ uses two deep learning models. A classification model for classifying images as complete or incomplete, and a segmentation model for segmenting the incomplete images. The code for training the models is available at the [Deep Motility page](https://github.com/joheras/Deep-Motility/tree/main/training). The datasets used for training and testing the models are [freely available](https://unirioja-my.sharepoint.com/:f:/g/personal/joheras_unirioja_es/Emp47LEiEDtBmiJBQBYnCN4BzQvuNxF9yR0fP3RYkCX9QA?e=0tfXic). The models that we have created are also [freely available](https://www.dropbox.com/sh/iykifqvhrnwbxfg/AACVciFDoP_ipG6oOedzfK-7a?dl=0).
+
+
+## Motility plugin
+
+
+## Comparison application
+
+We have created a [java application for comparing two kinds of annotations](https://github.com/joheras/Comparator). Using this application, we have shown that the annotation produced by MotilityJ is indistinguisable from that produced by human experts.  
 
 ## Acknowledgements
 
