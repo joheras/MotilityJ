@@ -11,20 +11,27 @@ MotilityJ is an application for the segmentation of motility images.
 
 In order to use MotilityJ, it is necessary to install the following Python package [Deep-Motility](https://pypi.org/project/Deep-Motility). You need to use `pip`:
 
+### Ubuntu
+
 For installing it in Ubuntu use:
 ```bash
 pip3 install Deep-Motility
 ```
 
-For installing it in Windows, you need to manually install the Pytorch library:
+### Windows
+
+First install [Python](https://www.python.org/downloads/). After downloading the Python executable, when installing it, it is important to select the option "Add Python 3 to PATH" in the first window that appears. 
+
+After install Python open the terminal and execute the following commands:
 
 ```bash
-pip install torch===1.7.0 torchvision===0.8.0 -f https://download.pytorch.org/whl/torch_stable.html
+pip install torch===1.7.1 torchvision===0.8.2 -f https://download.pytorch.org/whl/torch_stable.html
+pip install scikit-image==0.18.0rc0 scikit-learn==0.24.0rc1
 pip install Deep-Motility
 ```
 All the code from this package is located in it is own repository [Deep-Motility](https://github.com/joheras/Deep-Motility).
 
-Once that you have installed the Python package, you need to download the [Java application](https://github.com/joheras/MotilityJ/releases/download/v0.1/Motilidad.jar).
+Once that you have installed the Python package, you need to download the [Java application](https://github.com/joheras/MotilityJ/releases/download/v0.1/Motilidad.jar). You may need to install [Java](https://www.java.com/es/download/).
 
 
 
