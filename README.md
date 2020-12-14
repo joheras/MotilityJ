@@ -20,7 +20,7 @@ pip3 install imutils Deep-Motility
 
 ### Windows
 
-First install [Python 3.7.6](https://www.python.org/downloads/release/python-376/). After downloading the Python executable, when installing it, it is important to select the option "Add Python 3 to PATH" in the first window that appears. 
+First install [Python](https://www.python.org/downloads/). After downloading the Python executable, when installing it, it is important to select the option "Add Python 3 to PATH" in the first window that appears. 
 
 After install Python open the terminal and execute the following commands:
 
