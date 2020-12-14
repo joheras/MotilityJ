@@ -48,6 +48,7 @@ MotilityJ uses two deep learning models. A classification model for classifying 
 
 ## Motility plugin
 
+We initially created an [ImageJ plugin](https://github.com/joheras/Motilidad) to avoid the manual annotation of the images. 
 
 ## Comparison application
 
