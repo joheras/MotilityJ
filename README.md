@@ -39,7 +39,7 @@ Once that you have installed the Python package, you need to download the [Java 
 
 ## Video
 
-You can see how to use MotilityJ in the following video.
+You can see how to use MotilityJ in the following [video](https://youtu.be/tTv-ywg7JrA).
 
 ## Models
 
