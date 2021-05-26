@@ -19,7 +19,9 @@ In order to use MotilityJ, it is necessary to install the following Python packa
 
 For installing it in Ubuntu use:
 ```bash
-pip3 install imutils Deep-Motility
+pip install torch===1.7.1+cpu torchvision===0.8.2+cpu -f https://download.pytorch.org/whl/torch_stable.html
+pip install scikit-image==0.18.0rc0 scikit-learn==0.24.0rc1 imutils numpy==1.20.0rc1
+pip install Deep-Motility
 ```
 
 ### Windows
