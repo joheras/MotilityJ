@@ -37,7 +37,7 @@ pip install Deep-Motility
 ```
 All the code from this package is located in it is own repository [Deep-Motility](https://github.com/joheras/Deep-Motility).
 
-Once that you have installed the Python package, you need to download the [Java application](https://github.com/joheras/MotilityJ/releases/download/v1.1/Motilidad.jar). You may need to install [Java](https://www.java.com/es/download/).
+Once that you have installed the Python package, you need to download the [Java application](https://github.com/joheras/MotilityJ/releases/download/v1.0/Motility.jar). You may need to install [Java](https://www.java.com/es/download/).
 
 ## Video
 
