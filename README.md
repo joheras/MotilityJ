@@ -39,6 +39,26 @@ All the code from this package is located in it is own repository [Deep-Motility
 
 Once that you have installed the Python package, you need to download the [Java application](https://github.com/joheras/MotilityJ/releases/download/v1.0/Motility.jar). You may need to install [Java](https://www.java.com/es/download/).
 
+### OSX
+
+For installing it in OSX, open a terminal and use:
+
+```bash
+pip3 install torch==1.7.1 torchvision==0.8.2 torchaudio==0.7.2
+pip3 install scikit-image==0.18.0rc0 scikit-learn==0.24.0rc1 imutils numpy==1.20.0rc1
+pip3 install Deep-Motility
+```
+All the code from this package is located in it is own repository [Deep-Motility](https://github.com/joheras/Deep-Motility).
+
+Once that you have installed the Python package, you need to download the [Java application](https://github.com/joheras/MotilityJ/releases/download/v1.0/Motility.jar). You may need to install [Java](https://www.java.com/es/download/). In Ubuntu and OSX, you might need to run the program from the terminal using:
+
+```bash
+java -jar Motility.jar
+```
+
+
+
+
 ## Video
 
 You can see how to use MotilityJ in the following [video](https://youtu.be/tTv-ywg7JrA).
