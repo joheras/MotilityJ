@@ -15,7 +15,9 @@ MotilityJ is an application for the segmentation of motility images.
 
 In order to use MotilityJ, it is necessary to install the following Python package [Deep-Motility](https://pypi.org/project/Deep-Motility). You need to use `pip`:
 
-### Ubuntu
+### Deep-Motility package
+
+#### Ubuntu
 
 For installing it in Ubuntu use:
 ```bash
@@ -24,7 +26,7 @@ pip install scikit-image==0.18.0rc0 scikit-learn==0.24.0rc1 imutils numpy==1.20.
 pip install Deep-Motility
 ```
 
-### Windows
+#### Windows
 
 First install [Python](https://www.python.org/downloads/). After downloading the Python executable, when installing it, it is important to select the option "Add Python 3 to PATH" in the first window that appears. 
 
@@ -39,7 +41,7 @@ All the code from this package is located in it is own repository [Deep-Motility
 
 Once that you have installed the Python package, you need to download the [Java application](https://github.com/joheras/MotilityJ/releases/download/v1.0/Motility.jar). You may need to install [Java](https://www.java.com/es/download/).
 
-### OSX
+#### OSX
 
 For installing it in OSX, open a terminal and use:
 
@@ -49,6 +51,8 @@ pip3 install scikit-image==0.18.0rc0 scikit-learn==0.24.0rc1 imutils numpy==1.20
 pip3 install Deep-Motility
 ```
 All the code from this package is located in it is own repository [Deep-Motility](https://github.com/joheras/Deep-Motility).
+
+### Java application
 
 Once that you have installed the Python package, you need to download the [Java application](https://github.com/joheras/MotilityJ/releases/download/v1.0/Motility.jar). You may need to install [Java](https://www.java.com/es/download/). In Ubuntu and OSX, you might need to run the program from the terminal using:
 
