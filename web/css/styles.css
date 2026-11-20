@@ -157,7 +157,7 @@ th { color: var(--muted); font-weight: 600; font-size: 0.8rem; text-transform: u
 .notes-input:hover { border-color: var(--border); }
 .row-actions { width: 1%; }
 .row-actions button { border-color: transparent; }
-.bottom-bar { display: none; }
+.nav.bottom-bar { display: none; }
 
 /* ------------------------------------------------------------------ review */
 .step-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start; }
@@ -247,7 +247,58 @@ kbd { font: 0.85em ui-monospace, monospace; background: var(--surface-2); border
 .choose-list { display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow-y: auto; }
 .choose-item { justify-content: space-between; text-align: left; }
 .update-banner { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; padding: 8px 16px; background: var(--accent-soft); border-bottom: 1px solid var(--border); font-size: 0.9rem; }
-.drive-banner { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 0 0 18px; padding: 10px 14px; }
+/* Drive status pill in the top bar */
+.drive-pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; font-weight: 600; }
+.drive-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+.drive-pill[data-status="connected"] .dot { background: #22c55e; }
+.drive-pill[data-status="expired"] .dot, .drive-pill[data-status="error"] .dot { background: var(--danger); }
+
+/* Dropdown menus (ui.js menu()) */
+.menu { position: relative; }
+.menu > summary { list-style: none; cursor: pointer; user-select: none; }
+.menu > summary::-webkit-details-marker { display: none; }
+.menu[open] > summary { border-color: var(--accent); }
+.menu-list { position: absolute; top: calc(100% + 4px); z-index: 30; min-width: 230px; display: flex; flex-direction: column; padding: 6px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(16, 24, 40, 0.16); }
+.menu-right .menu-list { right: 0; }
+.menu-left .menu-list { left: 0; }
+.menu-item { border: 0; background: transparent; justify-content: flex-start; text-align: left; width: 100%; padding: 8px 10px; }
+.menu-item:hover:not(:disabled) { background: var(--surface-2); }
+.menu-more > summary { font-size: 1.1rem; line-height: 1; padding-inline: 12px; }
+.head-actions { align-items: center; }
+
+/* Summary tiles of an experiment */
+.stat-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: -6px; }
+.stat-tile { display: flex; flex-direction: column; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--accent);
+  border-radius: var(--radius); padding: 10px 14px; box-shadow: var(--shadow); }
+.stat-tile b { font-size: 1.45rem; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.stat-tile b small { font-size: 0.85rem; color: var(--muted); font-weight: 600; }
+.stat-tile > span { color: var(--muted); font-size: 0.82rem; }
+.stat-tile.s { border-left-color: var(--s-fg); }
+.stat-tile.i { border-left-color: var(--i-fg); }
+.stat-tile.r { border-left-color: var(--r-fg); background: color-mix(in srgb, var(--r-bg) 45%, var(--surface)); }
+.stat-tile.na { border-left-color: var(--na-fg); }
+
+/* Thumbnails with the analysis overlay (thumbs.js) */
+.thumb-frame { position: relative; display: block; width: 100%; aspect-ratio: 1; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); background: #111; }
+.thumb-frame img { width: 100%; height: 100%; object-fit: cover; display: block; border: 0 !important; border-radius: 0 !important; }
+.thumb-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.thumb-overlay .t-plate { fill: none; stroke: var(--plate); stroke-width: var(--sw); stroke-dasharray: calc(var(--sw) * 3) calc(var(--sw) * 2); opacity: 0.8; }
+.thumb-overlay .t-contour, .thumb-overlay .t-fill { fill: var(--growth); fill-opacity: 0.25; stroke: var(--growth); stroke-width: calc(var(--sw) * 1.4); stroke-linejoin: round; }
+.thumb-overlay .t-fill { stroke: none; fill-opacity: 0.16; }
+.plate-thumb:hover .thumb-frame { border-color: var(--accent); }
+.thumb-badges { display: inline-flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+.card-thumbs .thumb-frame { border-radius: 6px; }
+.thumb-frame.small { width: 56px; flex: none; border-radius: 6px; }
+
+/* Phone results list (replaces the wide table below 560 px) */
+.result-list { display: none; list-style: none; margin: 8px 0 0; padding: 0; }
+.result-list li + li { border-top: 1px solid var(--border); }
+.result-list a { display: flex; align-items: center; gap: 12px; padding: 8px 2px; color: var(--text); text-decoration: none; }
+.rl-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+.rl-name { font-size: 0.88rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rl-area { font-weight: 600; }
+.rl-area small { color: var(--muted); font-weight: 400; }
 
 /* ----------------------------------------------------------------- tablets */
 @media (max-width: 900px) {
@@ -275,7 +326,7 @@ kbd { font: 0.85em ui-monospace, monospace; background: var(--surface-2); border
 
   /* Experiment: main actions in a bar at the bottom of the screen. */
   .with-bottom-bar { padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
-  .bottom-bar {
+  .nav.bottom-bar {
     display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; margin: 0; border-top: 1px solid var(--border);
     background: var(--surface); padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
   }
@@ -286,6 +337,15 @@ kbd { font: 0.85em ui-monospace, monospace; background: var(--surface-2); border
   .file-cell { min-width: 0; font-size: 0.82rem; }
   .notes-cell { min-width: 90px; }
   .results .badge { padding: 1px 6px; font-size: 0.75rem; }
+  .table-wrap, .table-tools [data-cols], .results-table-only { display: none; }
+  .result-list { display: block; }
+  .page-head .head-actions { width: 100%; flex-wrap: nowrap; }
+  .page-head .head-actions > button { flex: 1 1 auto; }
+  .page-head .head-actions > .menu { flex: 0 0 auto; }
+  .stat-tiles { grid-template-columns: 1fr 1fr; }
+  .series-card > .section-head { flex-direction: column; }
+  .series-card > .section-head .actions > * { flex: 1 1 auto; }
+  .drive-pill { min-height: 36px; padding: 4px 10px; }
 
   /* Review: image kept visible while editing, navigation in a bottom bar. */
   .wizard { padding-bottom: calc(68px + env(safe-area-inset-bottom)); }

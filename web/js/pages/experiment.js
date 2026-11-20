@@ -12,12 +12,19 @@ import { fieldDef, isEmpty } from "../metadata.js";
 import { assayCard, bulkEditDialog, columnsDialog, conflictWarning, formatMeta, metaInput } from "../metadata-ui.js";
 import { requestPersistence } from "../pwa.js";
 import { seriesCard } from "../series-ui.js";
-import { busy, confirmDialog, fileButton, idle, showError, toast } from "../ui.js";
+import { needsReview, overlayThumb } from "../thumbs.js";
+import { busy, confirmDialog, fileButton, idle, menu, showError, toast } from "../ui.js";
 import { deleteExperimentAsk, renameExperiment } from "./experiments.js";
 
 export const classBadge = (result) => result
   ? h("span", { class: ["badge", result.klass === "complete" ? "cat-s" : "cat-i"] }, t(result.klass), result.edited ? h("span", { title: t("editedByHand") }, " ✎") : null)
   : h("span", { class: "badge cat-na" }, t("pending"));
+
+const reviewBadge = (result) => needsReview(result)
+  ? h("span", { class: "badge cat-r", title: t("needsReviewHint") }, "⚠ ", t("needsReview")) : null;
+
+const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
+const sd = (xs) => { const m = mean(xs); return Math.sqrt(xs.reduce((a, b) => a + (b - m) ** 2, 0) / Math.max(1, xs.length - 1)); };
 
 export async function render(view, { expId }, ctx) {
   const exp = await db.getExperiment(expId);
@@ -111,18 +118,36 @@ export async function render(view, { expId }, ctx) {
     const nComplete = images.filter((i) => i.result?.klass === "complete").length;
 
     const analyseLabel = pending ? t("analyseN", { n: pending }) : t("analyseAll");
+    const none = !images.length;
+    const exportMenu = menu(h("span", null, "⤓ ", t("export")), [
+      { label: t("exportExcelItem"), disabled: none, onClick: () => download(excelBlob(images, exp, settings), `${safeFileName(exp.name)}.xlsx`) },
+      { label: t("exportCsvItem"), disabled: none, onClick: () => download(csvBlob(tidyTable(images, exp, settings)), `${safeFileName(exp.name)}.csv`) },
+      { label: t("backupItem"), onClick: backup },
+      driveEnabled() ? { label: t("driveSave"), onClick: () => saveExperimentToDrive(exp) } : null,
+    ], { title: t("exportHint") });
+    const moreMenu = menu("⋯", [
+      { label: t("rename"), onClick: async () => { if (await renameExperiment(exp)) await draw(); } },
+      { label: t("deleteExperiment"), danger: true, onClick: async () => { if (await deleteExperimentAsk(exp, images.length)) location.hash = "#/"; } },
+    ], { title: t("moreActions"), className: "menu-more" });
     const head = h("div", { class: "page-head" },
       h("div", null,
         h("h1", null, exp.name),
         h("p", { class: "muted" }, t("nImages", { n: images.length }), images.length ? ` · ${t("nAnalysed", { n: done, total: images.length })}` : "")),
-      h("div", { class: "actions" },
-        h("button", { class: pending ? "primary" : "", onclick: analyseAll, disabled: !images.length }, "▶ ", analyseLabel),
-        h("button", { onclick: () => download(excelBlob(images, exp, settings), `${safeFileName(exp.name)}.xlsx`), disabled: !images.length, title: t("exportExcelHint") }, t("exportExcel")),
-        h("button", { onclick: () => download(csvBlob(tidyTable(images, exp, settings)), `${safeFileName(exp.name)}.csv`), disabled: !images.length, title: t("exportCsvHint") }, t("exportCsv")),
-        h("button", { onclick: backup, title: t("backupHint") }, t("backup")),
-        driveEnabled() ? h("button", { onclick: () => saveExperimentToDrive(exp) }, t("driveSave")) : null,
-        h("button", { onclick: async () => { if (await renameExperiment(exp)) await draw(); } }, t("rename")),
-        h("button", { class: "danger", onclick: async () => { if (await deleteExperimentAsk(exp, images.length)) location.hash = "#/"; } }, t("delete"))));
+      h("div", { class: "actions head-actions" },
+        h("button", { class: pending ? "primary" : "", onclick: analyseAll, disabled: none }, "▶ ", analyseLabel),
+        exportMenu, moreMenu));
+
+    // Summary tiles: what the experiment found, and what still needs attention.
+    const areas = images.filter((i) => i.result?.klass === "incomplete").map((i) => rowContext(i, exp, settings).m?.areaMm2).filter(Number.isFinite);
+    const nReview = images.filter((i) => needsReview(i.result)).length;
+    const tile = (value, label, cls = "") => h("div", { class: ["stat-tile", cls] }, h("b", null, value), h("span", null, label));
+    const stats = images.length ? h("div", { class: "stat-tiles" },
+      tile(nComplete, t("complete"), "s"),
+      tile(done - nComplete, t("incomplete"), "i"),
+      areas.length ? tile(h("span", null, fmtNumber(mean(areas), 1), areas.length > 1 ? h("small", null, ` ± ${fmtNumber(sd(areas), 1)}`) : null),
+        t("meanIncompleteArea")) : null,
+      nReview ? tile(nReview, t("needsReview"), "r") : null,
+      pending ? tile(pending, t("pending"), "na") : null) : null;
 
     const dropzone = h("label", { class: "dropzone small-dropzone" },
       h("input", { type: "file", accept: ACCEPT, multiple: true, onchange: (e) => { const f = [...e.target.files]; e.target.value = ""; if (f.length) addFiles(f); } }),
@@ -141,9 +166,9 @@ export async function render(view, { expId }, ctx) {
       const url = URL.createObjectURL(img.thumb || img.blob);
       urls.push(url);
       return h("a", { class: "plate-thumb", href: `#/e/${exp.id}/i/${img.id}`, title: img.name },
-        h("img", { src: url, alt: img.name, loading: "lazy" }),
+        overlayThumb(img, url),
         h("span", { class: "thumb-name" }, img.name),
-        classBadge(img.result));
+        h("span", { class: "thumb-badges" }, classBadge(img.result), reviewBadge(img.result)));
     });
 
     const cols = visibleColumns(settings);
@@ -179,13 +204,23 @@ export async function render(view, { expId }, ctx) {
       return h("tr", { class: selected.has(img.id) ? "selected" : null },
         h("td", { class: "sel-cell" }, box),
         h("td", { class: "file-cell" }, h("a", { href: `#/e/${exp.id}/i/${img.id}` }, img.name)),
-        h("td", null, classBadge(img.result)),
+        h("td", null, h("span", { class: "thumb-badges" }, classBadge(img.result), reviewBadge(img.result))),
         cols.map((col) => cell(img, c, col)),
         h("td", { class: "row-actions" }, h("button", { class: "small ghost danger", title: t("removeImage"), "aria-label": t("removeImage"),
           onclick: async () => {
             if (await confirmDialog(t("removeImageConfirm", { name: img.name }), { ok: t("remove"), danger: true })) { await db.deleteImage(img.id); await draw(); }
           } }, "✕")));
     });
+
+    // Phones: a compact list (thumbnail with outline, class, area) instead of the wide table.
+    const phoneList = h("ul", { class: "result-list" }, images.map((img, i) => {
+      const m = rowContext(img, exp, settings).m;
+      return h("li", null, h("a", { href: `#/e/${exp.id}/i/${img.id}` },
+        overlayThumb(img, urls[i], { className: "thumb-frame small" }),
+        h("span", { class: "rl-main" }, h("span", { class: "rl-name" }, img.name),
+          h("span", { class: "thumb-badges" }, classBadge(img.result), reviewBadge(img.result))),
+        h("span", { class: "rl-area num" }, m?.areaMm2 != null ? h("span", null, fmtNumber(m.areaMm2, 1), h("small", null, " mm²")) : "")));
+    }));
 
     const tableTools = h("div", { class: "table-tools" },
       h("button", { class: "small", onclick: bulkEdit, disabled: !selected.size, title: t("bulkEditHint") }, "✎ ", selected.size ? t("bulkEditN", { n: selected.size }) : t("bulkEdit")),
@@ -204,6 +239,7 @@ export async function render(view, { expId }, ctx) {
             cols.map((col) => h("th", { class: col.num ? "num" : null, title: col.label() }, col.header())), h("th"))),
           h("tbody", null, rows)))
         : h("p", { class: "muted" }, t("noImagesYet")),
+      images.length ? phoneList : null,
       images.length ? h("p", { class: "muted small" }, t("areaNote", { d: diam }),
         settings.manualPxPerMm > 0 ? ` ${t("manualScaleActive", { s: settings.manualPxPerMm })}` : "", " ", h("a", { href: "#/settings" }, t("settings"))) : null);
 
@@ -214,9 +250,9 @@ export async function render(view, { expId }, ctx) {
     const bottom = h("div", { class: "nav bottom-bar" }, camera(), chooser("button bottom-choose"),
       h("button", { class: pending ? "primary" : "", onclick: analyseAll, disabled: !images.length }, "▶ ", analyseLabel));
 
-    view.replaceChildren(
+    view.replaceChildren(...[
       h("div", { class: "crumbs" }, h("a", { href: "#/" }, t("experiments")), " › ", exp.name),
-      head, assayCard(exp, settings, saveAssay, { open: assayOpen }), addCard, results, series, gallery, bottom);
+      head, stats, assayCard(exp, settings, saveAssay, { open: assayOpen }), addCard, results, series, gallery, bottom].filter(Boolean));
   }
 
   async function backup() {

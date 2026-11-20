@@ -84,3 +84,20 @@ export function fileButton(text, { accept, multiple = false, capture = null, cla
     onchange: () => { const files = [...input.files]; input.value = ""; if (files.length) onFiles(files); } });
   return h("label", { class: ["file-button", className] }, input, text);
 }
+
+/** A small dropdown menu: items = [{ label, onClick, danger?, disabled? } | null]. Closes on choice, outside click or Esc. */
+export function menu(label, items, { className = "", title = null, align = "right" } = {}) {
+  const box = h("details", { class: ["menu", `menu-${align}`, className] });
+  const close = () => box.removeAttribute("open");
+  const list = h("div", { class: "menu-list", role: "menu" }, items.filter(Boolean).map((it) =>
+    h("button", { type: "button", role: "menuitem", class: ["menu-item", it.danger && "danger"], disabled: !!it.disabled,
+      onclick: (e) => { e.preventDefault(); close(); it.onClick(); } }, it.label)));
+  box.append(h("summary", { class: "button", title, "aria-haspopup": "menu" }, label), list);
+  const outside = (e) => { if (!box.contains(e.target)) close(); };
+  const esc = (e) => { if (e.key === "Escape") { close(); box.querySelector("summary").focus(); } };
+  box.addEventListener("toggle", () => {
+    if (box.open) { document.addEventListener("click", outside, true); document.addEventListener("keydown", esc); }
+    else { document.removeEventListener("click", outside, true); document.removeEventListener("keydown", esc); }
+  });
+  return box;
+}

@@ -1,7 +1,7 @@
-// MotilityJ web: app shell (top bar, update banner, Drive status), hash router and boot.
+// MotilityJ web: app shell (top bar with Drive status, update banner), hash router and boot.
 import * as db from "./db.js";
 import { h } from "./dom.js";
-import { driveStatusPanel } from "./drive-ui.js";
+import { driveStatusButton } from "./drive-ui.js";
 import { t } from "./i18n.js";
 import { applyUpdate, canInstall, onPwaChange, promptInstall, registerServiceWorker, updateAvailable } from "./pwa.js";
 import { showError } from "./ui.js";
@@ -31,7 +31,7 @@ function topbar() {
     .map(([href, label, cls]) => h("a", { href, class: ["topbar-link", cls] }, label));
   const bar = h("header", { class: "topbar" },
     h("a", { href: "#/", class: "brand" }, h("span", { class: "logo", "aria-hidden": "true" }, "◉"), " MotilityJ"),
-    h("nav", { class: "topbar-user" }, install, ...links,
+    h("nav", { class: "topbar-user" }, install, ...links, driveStatusButton(),
       h("span", { class: "tag topbar-offline", title: t("dataLocalHint") }, t("dataLocal"))));
   const banner = h("div", { class: "update-banner", role: "status" }, t("updateAvailable"),
     h("button", { class: "small primary", onclick: applyUpdate }, t("reload")));
@@ -76,9 +76,8 @@ async function boot() {
   registerServiceWorker();
   const { bar, banner, links } = topbar();
   const main = h("main");
-  const drive = driveStatusPanel();
   const view = h("div", { class: "view" });
-  main.append(...[drive, view].filter(Boolean));
+  main.append(view);
   const footer = h("footer", { class: "footer muted small" }, "MotilityJ · ", h("a", { href: "#/help" }, t("help")), " · ",
     h("a", { href: "#/help/privacy" }, t("privacy")), " · ", h("a", { href: "https://github.com/joheras/MotilityJ", target: "_blank", rel: "noreferrer" }, t("sourceCode")));
   document.getElementById("app").replaceChildren(bar, banner, main, footer);

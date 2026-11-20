@@ -17,25 +17,26 @@ const call = (name, ...args) => {
   return drive[name](...args);
 };
 
-export function driveStatusPanel() {
+/** Compact Drive status for the top bar: a pill with a coloured dot; click to connect. */
+export function driveStatusButton() {
   if (!driveEnabled()) return null;
-  const text = h("span", { class: "grow" });
-  const button = h("button", { class: "small", onclick: connect });
-  const panel = h("div", { class: "drive-banner card" }, h("span", { class: "tag" }, "Google Drive"), text, button);
+  const label = h("span", { class: "drive-label" }, "Drive");
+  const button = h("button", { class: "small drive-pill", onclick: connect }, h("span", { class: "dot", "aria-hidden": "true" }), label);
   const show = (status) => {
-    text.textContent = t(`drive_${status}`) || status;
-    button.textContent = status === "connected" ? t("driveConnected") : t("driveConnect");
-    button.disabled = status === "connected";
-    panel.dataset.status = status;
+    const text = t(`drive_${status}`) || status;
+    button.title = text;
+    button.setAttribute("aria-label", `Google Drive: ${text}`);
+    button.dataset.status = status;
   };
   async function connect() {
+    if (button.dataset.status === "connected") { toast(t("drive_connected"), "ok"); return; }
     try { await call("connect"); } catch (e) { showError(e); }
   }
   let connected = false;
   try { connected = drive.isConnected?.(); } catch { /* ignore */ }
   show(connected ? "connected" : "disconnected");
   try { drive.onStatusChange?.(show); } catch { /* ignore */ }
-  return panel;
+  return button;
 }
 
 async function ensureConnected() {

@@ -4,6 +4,7 @@ import { fmtDate, h } from "../dom.js";
 import { driveEnabled, restoreFromDrive } from "../drive-ui.js";
 import { BACKUP_EXT, backupBlob, download, readJsonFile, restoreBackup } from "../export.js";
 import { t } from "../i18n.js";
+import { needsReview, overlayThumb } from "../thumbs.js";
 import { busy, confirmDialog, fileButton, idle, promptDialog, showError, toast } from "../ui.js";
 
 export async function newExperiment() {
@@ -69,10 +70,12 @@ export async function render(view) {
 
   function card(exp, images) {
     const analysed = images.filter((i) => i.result).length;
+    const nComplete = images.filter((i) => i.result?.klass === "complete").length;
+    const nReview = images.filter((i) => needsReview(i.result)).length;
     const thumbs = images.slice(0, 5).map((img) => {
       const url = URL.createObjectURL(img.thumb || img.blob);
       urls.push(url);
-      return h("img", { src: url, alt: "", loading: "lazy" });
+      return overlayThumb(img, url, { className: "thumb-frame tiny" });
     });
     const stop = (fn) => async (e) => { e.preventDefault(); e.stopPropagation(); try { if (await fn()) await draw(); } catch (err) { showError(err); } };
     return h("a", { class: "card exp-card", href: `#/e/${exp.id}` },
@@ -84,7 +87,10 @@ export async function render(view) {
       h("div", { class: "card-thumbs" }, thumbs.length ? thumbs : h("div", { class: "img-placeholder" })),
       h("div", { class: "meta muted" },
         h("span", null, t("nImages", { n: images.length })),
-        images.length ? h("span", { class: analysed === images.length ? "badge cat-s" : "badge cat-na" }, t("nAnalysed", { n: analysed, total: images.length })) : null,
+        images.length && analysed < images.length ? h("span", { class: "badge cat-na" }, t("nAnalysed", { n: analysed, total: images.length })) : null,
+        nComplete ? h("span", { class: "badge cat-s" }, nComplete, " ", t("complete")) : null,
+        analysed - nComplete ? h("span", { class: "badge cat-i" }, analysed - nComplete, " ", t("incomplete")) : null,
+        nReview ? h("span", { class: "badge cat-r", title: t("needsReviewHint") }, "⚠ ", nReview) : null,
         h("span", null, fmtDate(exp.updated))));
   }
 
