@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deep-Motility eval</title>
+<style>
+  body { font: 14px/1.4 system-ui, sans-serif; margin: 16px; background: #fff; color: #111; }
+  pre { background: #f4f4f4; padding: 8px; overflow-x: auto; }
+  table { border-collapse: collapse; } td, th { border: 1px solid #ccc; padding: 2px 6px; text-align: right; }
+</style>
+</head>
+<body>
+<h1>Deep-Motility eval (dev page, not part of the app)</h1>
+<p>Serve a directory that contains this repo's <code>web/</code> and a link to the dataset, e.g.
+<code>ln -s /path/to/Motilidad data; ln -s /path/to/repo/web web; python3 -m http.server</code>, then open
+<code>/web/js/deepmotility/eval.html?data=/data/&amp;n=0</code> (<code>n</code> limits images per set, 0 = all;
+<code>sets=seg,cls</code>). Latency of single ONNX files with the WASM runtime: <code>?bench=/m/a.onnx:512,/m/b.onnx:384&amp;auto=1</code>.</p>
+<button id="run">Run</button> <span id="status"></span>
+<div id="summary"></div>
+<pre id="log"></pre>
+<script type="module">
+import { analyzeImageDM, loadModel } from "./index.js";
+const analyzeImage = (img) => analyzeImageDM(img);
+
+const q = new URLSearchParams(location.search);
+const DATA = q.get("data") || "/data/";
+const LIMIT = +(q.get("n") || 0);
+const SETS = (q.get("sets") || "seg,cls").split(",");
+const $ = (id) => document.getElementById(id);
+const log = (s) => { $("log").textContent += s + "\n"; };
+
+async function listDir(url, ext) {
+  const html = await (await fetch(url)).text();
+  const names = [...html.matchAll(/href="([^"?]+)"/g)].map((m) => decodeURIComponent(m[1])).filter((n) => n.toLowerCase().endsWith(ext));
+  return LIMIT ? names.slice(0, LIMIT) : names;
+}
+const enc = (path) => path.split("/").map(encodeURIComponent).join("/");
+
+async function loadImageData(url) {
+  const bmp = await createImageBitmap(await (await fetch(enc(url))).blob());
+  const c = new OffscreenCanvas(bmp.width, bmp.height), ctx = c.getContext("2d");
+  ctx.drawImage(bmp, 0, 0);
+  return ctx.getImageData(0, 0, bmp.width, bmp.height);
+}
+
+function rasterize(contour, w, h) {
+  const c = new OffscreenCanvas(w, h), ctx = c.getContext("2d");
+  if (contour.length) {
+    ctx.fillStyle = "#fff"; ctx.beginPath();
+    // +0.5: polygon vertices are pixel-centre coordinates, canvas pixels span [i, i+1].
+    contour.forEach(([x, y], i) => (i ? ctx.lineTo(x + 0.5, y + 0.5) : ctx.moveTo(x + 0.5, y + 0.5)));
+    ctx.closePath(); ctx.fill();
+  }
+  return ctx.getImageData(0, 0, w, h).data;
+}
+
+const mean = (a) => a.reduce((s, v) => s + v, 0) / a.length;
+const med = (a) => { const b = [...a].sort((x, y) => x - y); return b.length % 2 ? b[(b.length - 1) / 2] : (b[b.length / 2 - 1] + b[b.length / 2]) / 2; };
+const pct = (a, p) => { const b = [...a].sort((x, y) => x - y); return b[Math.min(b.length - 1, Math.floor(p / 100 * b.length))]; };
+
+async function evalSeg() {
+  const base = DATA + "Segmentation/dataset/";
+  const names = await listDir(base + "Labels/test/", ".png");
+  const rows = [];
+  for (const [i, n] of names.entries()) {
+    $("status").textContent = `seg ${i + 1}/${names.length}`;
+    const img = await loadImageData(base + "Images/test/" + n.replace(/\.png$/, ".jpg"));
+    const gt = await loadImageData(base + "Labels/test/" + n);
+    const t0 = performance.now();
+    const res = await analyzeImage(img);
+    const ms = performance.now() - t0;
+    const pred = rasterize(res.growthContour, gt.width, gt.height); // biggest region, also when classified complete
+    let inter = 0, uni = 0, a = 0, b = 0;
+    for (let k = 0; k < gt.data.length; k += 4) {
+      const g = gt.data[k] > 127, p = pred[k + 3] > 127;
+      if (g) a++; if (p) b++; if (g && p) inter++; if (g || p) uni++;
+    }
+    const frac = a / (Math.PI * res.plate.r ** 2);
+    rows.push({ n, iou: uni ? inter / uni : 1, dice: 2 * inter / (a + b || 1), relAE: Math.abs(b - a) / Math.max(a, 1), frac, ms, segMs: res.ms.seg, clsMs: res.ms.cls, klass: res.klass, areaPx: res.areaPx, gtPx: a });
+  }
+  const iou = rows.map((r) => r.iou);
+  const s = {
+    n: rows.length, mIoU: mean(iou), medIoU: med(iou), mDice: mean(rows.map((r) => r.dice)),
+    relAE_mean: mean(rows.map((r) => r.relAE)), relAE_median: med(rows.map((r) => r.relAE)),
+    classifiedComplete: rows.filter((r) => r.klass === "complete").length,
+    ms_median: med(rows.map((r) => r.ms)), ms_p90: pct(rows.map((r) => r.ms), 90),
+    seg_ms_median: med(rows.map((r) => r.segMs)), cls_ms_median: med(rows.map((r) => r.clsMs)),
+    bins: [[0, .02], [.02, .1], [.1, .3], [.3, .6], [.6, 2]].map(([lo, hi]) => {
+      const z = rows.filter((r) => r.frac >= lo && r.frac < hi); return { range: `${lo}-${hi}`, n: z.length, mIoU: z.length ? mean(z.map((r) => r.iou)) : null };
+    }),
+  };
+  rows.sort((x, y) => x.iou - y.iou);
+  log("SEG summary " + JSON.stringify(s, null, 1));
+  log("worst: " + rows.slice(0, 15).map((r) => `${r.n} ${r.iou.toFixed(3)}`).join("; "));
+  return { summary: s, rows };
+}
+
+async function evalCls() {
+  const rows = [];
+  for (const [cls, y] of [["Complete", 1], ["Incomplete", 0]]) {
+    const dir = DATA + "Clasificacion/dataset/valid/" + cls + "/";
+    const names = await listDir(dir, ".jpg");
+    for (const [i, n] of names.entries()) {
+      $("status").textContent = `cls ${cls} ${i + 1}/${names.length}`;
+      const img = await loadImageData(dir + n);
+      const t0 = performance.now();
+      const res = await analyzeImage(img);
+      rows.push({ n: cls + "/" + n, y, p: res.klass === "complete" ? 1 : 0, conf: res.confidence, ms: performance.now() - t0 });
+    }
+  }
+  const tp = rows.filter((r) => r.y && r.p).length, tn = rows.filter((r) => !r.y && !r.p).length;
+  const fp = rows.filter((r) => !r.y && r.p).length, fn = rows.filter((r) => r.y && !r.p).length;
+  const s = { n: rows.length, acc: (tp + tn) / rows.length, f1_complete: 2 * tp / (2 * tp + fp + fn), f1_incomplete: 2 * tn / (2 * tn + fp + fn), tp, tn, fp, fn, ms_median: med(rows.map((r) => r.ms)) };
+  log("CLS summary " + JSON.stringify(s));
+  log("errors: " + rows.filter((r) => r.y !== r.p).map((r) => `${r.n} (${r.conf.toFixed(2)})`).join("; "));
+  return { summary: s, rows };
+}
+
+// WASM latency of arbitrary ONNX files (random input), same runtime and settings as worker.js.
+async function bench(specs) {
+  const ORT = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/";
+  const ort = await import(ORT + "ort.wasm.min.mjs");
+  ort.env.wasm.wasmPaths = ORT;
+  ort.env.wasm.numThreads = +(q.get("threads") || 1);
+  const out = {};
+  for (const spec of specs) {
+    const [url, side] = [spec.slice(0, spec.lastIndexOf(":")), +spec.slice(spec.lastIndexOf(":") + 1)];
+    $("status").textContent = `bench ${url}`;
+    const t0 = performance.now();
+    const s = await ort.InferenceSession.create(url, { executionProviders: ["wasm"], graphOptimizationLevel: "all" });
+    const create = performance.now() - t0;
+    const x = new ort.Tensor("float32", Float32Array.from({ length: 3 * side * side }, () => Math.random() * 2 - 1), [1, 3, side, side]);
+    const ms = [];
+    for (let i = 0; i < +(q.get("reps") || 5); i++) { const t = performance.now(); await s.run({ [s.inputNames[0]]: x }); ms.push(performance.now() - t); }
+    out[url] = { side, create_ms: Math.round(create), first_ms: Math.round(ms[0]), median_ms: Math.round(med(ms.slice(1))) };
+    log("BENCH " + JSON.stringify({ url, ...out[url] }));
+    await s.release();
+  }
+  return out;
+}
+
+$("run").onclick = async () => {
+  $("run").disabled = true;
+  const out = {};
+  try {
+    if (q.get("bench")) { out.bench = await bench(q.get("bench").split(",")); window.evalResults = out; $("status").textContent = "done"; $("run").disabled = false; return; }
+    $("status").textContent = "loading models";
+    await loadModel();
+    if (SETS.includes("seg")) out.seg = await evalSeg();
+    if (SETS.includes("cls")) out.cls = await evalCls();
+    $("status").textContent = "done";
+  } catch (e) { $("status").textContent = "error"; log(String(e.stack || e)); }
+  window.evalResults = out;
+  $("run").disabled = false;
+};
+if (q.get("auto")) $("run").click();
+</script>
+</body>
+</html>

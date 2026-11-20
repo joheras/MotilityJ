@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 
 WEB = Path(__file__).resolve().parent.parent
-EXCLUDE_DIRS = {"tools", ".well-known"}
+EXCLUDE_DIRS = {"tools", ".well-known", "models"}  # models/: downloaded on demand by js/deepmotility/
 EXCLUDE_FILES = {"sw.js", ".DS_Store", "Thumbs.db"}
 # .onnx: SAM model files, downloaded on demand by js/sam/ and kept in their own cache.
 EXCLUDE_SUFFIXES = {".map", ".py", ".md", ".onnx"}

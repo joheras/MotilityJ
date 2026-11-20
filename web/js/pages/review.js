@@ -2,6 +2,7 @@
 // contour editing (drag/insert/delete vertices, freehand redraw, Segment Anything prompts); plate adjustment;
 // live area; undo.
 import { analyse } from "../analyze.js";
+import { deepMotilityTool } from "../deepmotility/review-tool.js";
 import * as db from "../db.js";
 import { fmtNumber, h, s, setAttrs } from "../dom.js";
 import { areaMm2, distToSegment, mmPerPx, polygonArea, simplify } from "../geometry.js";
@@ -448,6 +449,9 @@ export async function render(view, { expId, imageId }, ctx) {
     h("span", { class: "nav-info" }, `${idx + 1}/${images.length}`, h("span", { class: "nav-narrow" }, " · ", navClass)),
     nextBtn);
 
+  const dm = deepMotilityTool({ img, svg, settings: ctx.settings, getResult: () => result,
+    apply: (r) => { pushUndo(snapshot()); result = r; drawOverlay(); updatePanel(); scheduleSave(); } });
+
   const panel = h("div", { class: "panel" },
     h("div", { class: "section-head" }, h("h2", { class: "file-title", title: img.name }, img.name), savedEl),
     statusEl,
@@ -458,6 +462,7 @@ export async function render(view, { expId, imageId }, ctx) {
     modeHelp,
     samPanel,
     h("div", { class: "btn-row" }, undoBtn, h("button", { onclick: reanalyse }, "⟳ ", result ? t("reanalyse") : t("analyse"))),
+    dm.element,
     h("label", null, t("colNotes"), notesEl),
     nav);
 
@@ -491,5 +496,6 @@ export async function render(view, { expId, imageId }, ctx) {
     window.removeEventListener("resize", onResize);
     if (saveTimer) save();
     URL.revokeObjectURL(url);
+    dm.destroy();
   };
 }

@@ -2,6 +2,8 @@
 // and select it in LANG (e.g. from navigator.language).
 // Placeholders: {name} is replaced by params.name.
 
+import { strings as dmStrings } from "./deepmotility/strings.js";
+
 const en = {
   // shell
   experiments: "Experiments", settings: "Settings", help: "Help", privacy: "Privacy", sourceCode: "Source code",
@@ -158,6 +160,7 @@ const en = {
 
 const LANGS = { en };
 const LANG = "en";
+Object.assign(en, dmStrings); // Deep-Motility tool (js/deepmotility/strings.js)
 
 export function t(key, params) {
   let s = LANGS[LANG]?.[key] ?? en[key];
