@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>drive.js mock tests</title>
+  <style>
+    body { font: 14px/1.5 system-ui, sans-serif; margin: 16px; background: #fff; color: #17202a; }
+    .pass { color: #0f766e; } .fail { color: #b91c1c; font-weight: 600; }
+    pre { white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+<h1>drive.js against a fake Drive REST API</h1>
+<p>No request leaves the browser: <code>fetch</code> and Google Identity Services are replaced by in-memory fakes.
+  Serve <code>web/</code> (e.g. <code>python3 -m http.server 8090 --directory web</code>) and open
+  <code>/js/drive.mock-test.html</code>.</p>
+<p id="summary">Running…</p>
+<ol id="log"></ol>
+<script type="module">
+import * as drive from "./drive.js";
+
+const DB = "motilityj-drive-queue-test";
+const log = document.getElementById("log");
+const results = [];
+window.__results = results;
+
+// ------------------------------------------------------------------ fake Drive v3
+class FakeDrive {
+  files = new Map();
+  requests = [];
+  failures = []; // [{ status, body, network, when?: (method, url) => bool }]
+  seq = 0;
+  token = null;
+
+  add(f) {
+    const t = new Date(Date.UTC(2026, 0, 1, 0, 0, ++this.seq)).toISOString();
+    const file = { id: `f${this.seq}`, mimeType: "application/octet-stream", parents: [], appProperties: {}, content: new Uint8Array(),
+      trashed: false, version: "1", createdTime: t, modifiedTime: t, ...f };
+    this.files.set(file.id, file);
+    return file;
+  }
+  pub(f) {
+    const { content, trashed, ...rest } = f;
+    return { ...rest, size: String(content.length), thumbnailLink: f.mimeType.startsWith("image/") ? `https://lh3.example/${f.id}` : undefined };
+  }
+  matches(f, q) {
+    const unq = (s) => s.slice(1, -1).replace(/\\'/g, "'").replace(/\\\\/g, "\\");
+    const lit = "('(?:[^'\\\\]|\\\\.)*')";
+    for (const m of q.matchAll(new RegExp(`name = ${lit}`, "g"))) if (f.name !== unq(m[1])) return false;
+    for (const m of q.matchAll(new RegExp(`mimeType = ${lit}`, "g"))) if (f.mimeType !== unq(m[1])) return false;
+    for (const m of q.matchAll(new RegExp(`mimeType != ${lit}`, "g"))) if (f.mimeType === unq(m[1])) return false;
+    for (const m of q.matchAll(new RegExp(`${lit} in parents`, "g"))) if (!f.parents.includes(unq(m[1]))) return false;
+    for (const m of q.matchAll(new RegExp(`appProperties has \\{ key=${lit} and value=${lit} \\}`, "g")))
+      if (f.appProperties?.[unq(m[1])] !== unq(m[2])) return false;
+    if (/trashed = false/.test(q) && f.trashed) return false;
+    return true;
+  }
+  parentOk(parents) {
+    return (parents || []).every((p) => p === "root" || (this.files.has(p) && !this.files.get(p).trashed));
+  }
+  byName(name) { return [...this.files.values()].filter((f) => f.name === name); }
+  text(f) { return new TextDecoder().decode(f.content); }
+
+  fetch = async (input, init = {}) => {
+    const url = new URL(String(input));
+    const method = init.method ?? "GET";
+    this.requests.push({ method, url: url.toString() });
+    const i = this.failures.findIndex((x) => !x.when || x.when(method, url));
+    if (i >= 0) {
+      const failure = this.failures.splice(i, 1)[0];
+      if (failure.network) throw new TypeError("Failed to fetch");
+      return Response.json(failure.body ?? {}, { status: failure.status });
+    }
+    if (init.headers?.Authorization !== `Bearer ${this.token}`) return Response.json({ error: { message: "Invalid Credentials" } }, { status: 401 });
+    if (url.hostname !== "www.googleapis.com") throw new Error(`unexpected host ${url.hostname}`);
+    const json = (b, status = 200) => Response.json(b, { status });
+    const notFound = () => json({ error: { message: "File not found", errors: [{ reason: "notFound" }] } }, 404);
+    const path = url.pathname;
+
+    if (path === "/drive/v3/about") return json({ user: { emailAddress: "lab@example.org" } });
+    if (path === "/drive/v3/files" && method === "GET") {
+      const q = url.searchParams.get("q") ?? "";
+      const found = [...this.files.values()].filter((f) => this.matches(f, q));
+      const order = url.searchParams.get("orderBy") ?? "";
+      found.sort((a, b) => (/modified/.test(order) ? a.modifiedTime.localeCompare(b.modifiedTime) : a.createdTime.localeCompare(b.createdTime)));
+      if (/desc/.test(order)) found.reverse();
+      const start = Number(url.searchParams.get("pageToken") ?? 0); // pages of 2 to exercise nextPageToken
+      return json({ files: found.slice(start, start + 2).map((f) => this.pub(f)), nextPageToken: start + 2 < found.length ? String(start + 2) : undefined });
+    }
+    if (path === "/drive/v3/files" && method === "POST") {
+      const meta = JSON.parse(init.body);
+      if (!this.parentOk(meta.parents)) return notFound();
+      return json(this.pub(this.add(meta)));
+    }
+    const one = /^\/drive\/v3\/files\/([^/]+)$/.exec(path);
+    if (one) {
+      const f = this.files.get(decodeURIComponent(one[1]));
+      if (!f || f.trashed) return notFound();
+      if (method === "GET" && url.searchParams.get("alt") === "media") return new Response(f.content, { headers: { "Content-Type": f.mimeType } });
+      if (method === "GET") return json(this.pub(f));
+      if (method === "PATCH") {
+        const add = url.searchParams.get("addParents"), remove = url.searchParams.get("removeParents");
+        f.parents = f.parents.filter((p) => p !== remove).concat(add ? [add] : []);
+        return json(this.pub(f));
+      }
+    }
+    const up = /^\/upload\/drive\/v3\/files(?:\/([^/]+))?$/.exec(path);
+    if (up) {
+      const id = up[1] && decodeURIComponent(up[1]);
+      const type = url.searchParams.get("uploadType");
+      if (type === "multipart") {
+        const boundary = /boundary=(.+)$/.exec(init.headers["Content-Type"])[1];
+        const bytes = new Uint8Array(await init.body.arrayBuffer());
+        const s = new TextDecoder("windows-1252").decode(bytes); // one char per byte: indices are byte offsets
+        const [, metaPart, mediaPart] = s.split(`--${boundary}`);
+        const meta = JSON.parse(metaPart.slice(metaPart.indexOf("\r\n\r\n") + 4, -2));
+        const mediaStart = s.indexOf("\r\n\r\n", s.indexOf(mediaPart)) + 4;
+        const content = bytes.slice(mediaStart, s.lastIndexOf(`\r\n--${boundary}--`));
+        return this.write(id, meta, content);
+      }
+      if (type === "resumable") {
+        const meta = JSON.parse(init.body);
+        const session = `https://www.googleapis.com/upload/drive/v3/session/${++this.seq}`;
+        this.sessions ??= new Map();
+        this.sessions.set(session, { id, meta });
+        return new Response(null, { status: 200, headers: { Location: session } });
+      }
+    }
+    if (path.startsWith("/upload/drive/v3/session/") && method === "PUT") {
+      const { id, meta } = this.sessions.get(url.toString());
+      return this.write(id, meta, new Uint8Array(await init.body.arrayBuffer()));
+    }
+    return json({ error: { message: `unhandled ${method} ${path}` } }, 400);
+  };
+
+  write(id, meta, content) {
+    if (id) {
+      const f = this.files.get(id);
+      if (!f || f.trashed) return Response.json({ error: { message: "File not found" } }, { status: 404 });
+      Object.assign(f, meta, { content, version: String(Number(f.version) + 1), modifiedTime: new Date(Date.UTC(2026, 0, 2, 0, 0, ++this.seq)).toISOString() });
+      return Response.json(this.pub(f));
+    }
+    if (!this.parentOk(meta.parents)) return Response.json({ error: { message: "File not found" } }, { status: 404 });
+    return Response.json(this.pub(this.add({ ...meta, content })));
+  }
+}
+
+// ------------------------------------------------------------------ fake Google Identity Services
+function fakeGis(fd) {
+  const gis = {
+    calls: [], revoked: [], next: { expires_in: 3600 },
+    accounts: { oauth2: {
+      initTokenClient: (cfg) => ({
+        requestAccessToken: (opts) => {
+          gis.calls.push({ cfg, opts });
+          setTimeout(() => {
+            if (gis.next.error_type) return cfg.error_callback({ type: gis.next.error_type });
+            fd.token = `tok${gis.calls.length}`;
+            cfg.callback({ access_token: fd.token, expires_in: gis.next.expires_in, scope: cfg.scope });
+          }, 0);
+        },
+      }),
+      hasGrantedAllScopes: (r, scope) => r.scope === scope && !gis.next.denyScope,
+      revoke: (t, done) => { gis.revoked.push(t); done(); },
+    } },
+  };
+  return gis;
+}
+
+// ------------------------------------------------------------------ tiny runner
+function assert(cond, msg) { if (!cond) throw new Error(msg || "assertion failed"); }
+function eq(a, b, msg) { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${msg || "not equal"}: ${JSON.stringify(a)} !== ${JSON.stringify(b)}`); }
+async function rejects(p, kind, msg) {
+  try { await p; } catch (e) { if (kind && e.kind !== kind) throw new Error(`${msg}: expected kind ${kind}, got ${e.kind} (${e.message})`); return e; }
+  throw new Error(`${msg}: did not reject`);
+}
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+async function until(fn, ms = 3000) {
+  const t0 = Date.now();
+  while (!(await fn())) { if (Date.now() - t0 > ms) throw new Error("timeout"); await wait(20); }
+}
+async function test(name, fn) {
+  const li = document.createElement("li");
+  try { await fn(); li.className = "pass"; li.textContent = `PASS ${name}`; results.push({ name, ok: true }); }
+  catch (e) { li.className = "fail"; li.textContent = `FAIL ${name}: ${e.message}`; results.push({ name, ok: false, error: e.message }); console.error(e); }
+  log.append(li);
+}
+function pngBlob(w, h) {
+  const c = document.createElement("canvas");
+  c.width = w; c.height = h;
+  const g = c.getContext("2d");
+  g.fillStyle = "#8a6"; g.fillRect(0, 0, w, h); g.fillStyle = "#fff"; g.beginPath(); g.arc(w / 2, h / 2, h / 3, 0, 7); g.fill();
+  return new Promise((r) => c.toBlob(r, "image/png"));
+}
+
+// ------------------------------------------------------------------ tests
+const statuses = [];
+drive.onStatusChange((s) => statuses.push(s));
+let fd, gis, online = true;
+
+await new Promise((r) => { const req = indexedDB.deleteDatabase(DB); req.onsuccess = req.onerror = req.onblocked = r; });
+for (const k of Object.keys(localStorage)) if (k.startsWith("motilityj.drive.")) localStorage.removeItem(k);
+
+await test("unconfigured: disabled, nothing loaded", async () => {
+  eq(drive.isConfigured(), false, "isConfigured");
+  eq(drive.getStatus(), "disabled", "status");
+  eq(statuses, ["disabled"], "onStatusChange called immediately");
+  eq(drive.isConnected(), false, "isConnected");
+  await rejects(drive.connect(), "config", "connect");
+  await rejects(drive.uploadCapture(new Blob(["x"]), {}), "config", "uploadCapture");
+  assert(!document.querySelector('script[src*="accounts.google.com"]'), "GIS script must not be loaded");
+  const dbs = (await indexedDB.databases?.()) ?? [];
+  assert(!dbs.some((d) => d.name === "motilityj-drive-queue"), "queue database must not be created");
+});
+
+await test("connect via GIS token model, scope drive.file only", async () => {
+  fd = new FakeDrive();
+  gis = fakeGis(fd);
+  drive._setTestHooks({ clientId: "test-client.apps.googleusercontent.com", fetch: fd.fetch, gis, isOnline: () => online, sleep: () => Promise.resolve(), dbName: DB, device: "Lab PC" });
+  eq(drive.getStatus(), "disconnected", "status before");
+  await drive.connect();
+  eq(drive.getStatus(), "connected", "status");
+  assert(drive.isConnected(), "isConnected");
+  eq(drive.getAccountEmail(), "lab@example.org", "email");
+  eq(gis.calls[0].cfg.scope, "https://www.googleapis.com/auth/drive.file", "scope");
+  eq(gis.calls[0].cfg.client_id, "test-client.apps.googleusercontent.com", "client id");
+  eq(fd.files.size, 0, "connecting creates nothing in Drive");
+});
+
+await test("connect errors: pop-up closed, scope not granted -> status error", async () => {
+  await drive.disconnect();
+  gis.next = { error_type: "popup_closed" };
+  const e = await rejects(drive.connect(), "auth", "popup closed");
+  assert(/closed/.test(e.message), e.message);
+  eq(drive.getStatus(), "error", "status after popup closed");
+  gis.next = { expires_in: 3600, denyScope: true };
+  await rejects(drive.connect(), "permission", "scope denied");
+  gis.next = { expires_in: 3600 };
+  await drive.connect();
+  eq(drive.getStatus(), "connected", "reconnected");
+  eq(gis.calls.at(-1).opts.login_hint, undefined, "no hint after disconnect");
+});
+
+let exp = { uid: "exp-1", name: "Strain A / day 1", plates: [{ area: 12.5 }] };
+let firstId;
+await test("backupExperiment creates MotilityJ/Backups/<name>.motilityj.json and the folder layout", async () => {
+  const r = await drive.backupExperiment(exp);
+  eq(r.conflict, false, "conflict");
+  eq(r.name, "Strain A day 1.motilityj.json", "file name");
+  firstId = r.fileId;
+  const root = fd.byName("MotilityJ")[0], backups = fd.byName("Backups")[0], inbox = fd.byName("Inbox")[0], processed = fd.byName("Processed")[0];
+  eq(root.parents, ["root"], "MotilityJ in My Drive");
+  eq(backups.parents, [root.id], "Backups");
+  eq(inbox.parents, [root.id], "Inbox");
+  eq(processed.parents, [inbox.id], "Inbox/Processed");
+  const f = fd.files.get(firstId);
+  eq(f.parents, [backups.id], "file in Backups");
+  eq(JSON.parse(fd.text(f)), exp, "content");
+  eq(f.appProperties.uid, "exp-1", "uid appProperty");
+});
+
+await test("second backup updates in place (no new file, no new folders)", async () => {
+  const n = fd.files.size;
+  exp = { ...exp, plates: [...exp.plates, { area: 30 }] };
+  const r = await drive.backupExperiment(exp);
+  eq(r.fileId, firstId, "same file");
+  eq(r.conflict, false, "conflict");
+  eq(fd.files.size, n, "file count");
+  eq(fd.files.get(firstId).version, "2", "version bumped");
+  eq(JSON.parse(fd.text(fd.files.get(firstId))).plates.length, 2, "content updated");
+  assert(fd.requests.some((q) => q.method === "PATCH" && q.url.includes("/upload/drive/v3/files/" + firstId) && q.url.includes("uploadType=multipart")), "multipart PATCH");
+});
+
+await test("remote change since last sync -> conflict copy, original untouched", async () => {
+  const f = fd.files.get(firstId);
+  f.version = "7"; f.content = new TextEncoder().encode('{"uid":"exp-1","from":"other"}');
+  const r = await drive.backupExperiment(exp);
+  eq(r.conflict, true, "conflict");
+  assert(r.fileId !== firstId, "new file");
+  assert(/^Strain A day 1 \(conflict, Lab PC \d{4}-\d\d-\d\d \d\dh\d\d\)\.motilityj\.json$/.test(r.name), r.name);
+  eq(fd.text(fd.files.get(firstId)), '{"uid":"exp-1","from":"other"}', "original untouched");
+  const again = await drive.backupExperiment(exp);
+  eq(again.fileId, r.fileId, "later saves update the conflict copy in place");
+  eq(again.conflict, false, "no second conflict");
+});
+
+await test("never synced from this device but a backup exists -> conflict copy (no overwrite)", async () => {
+  localStorage.removeItem("motilityj.drive.sync.exp-1");
+  const before = fd.files.get(firstId).version;
+  const r = await drive.backupExperiment(exp);
+  eq(r.conflict, true, "conflict");
+  eq(fd.files.get(firstId).version, before, "original untouched");
+});
+
+await test("listBackups (paginated) and downloadBackup (read-only, then updates in place)", async () => {
+  await drive.backupExperiment({ uid: "exp-2", name: "Second" });
+  const list = await drive.listBackups();
+  eq(list.length, 4, "4 backups across pages");
+  assert(list.every((b) => b.id && b.name.endsWith(".motilityj.json") && b.modifiedTime), "shape");
+  const n = fd.files.size;
+  const mutations = fd.requests.filter((q) => q.method !== "GET").length;
+  const data = await drive.downloadBackup(firstId);
+  eq(data.from, "other", "content");
+  eq(fd.files.size, n, "load writes nothing");
+  eq(fd.requests.filter((q) => q.method !== "GET").length, mutations, "no mutating requests on load");
+  const r = await drive.backupExperiment({ ...data, name: "Strain A / day 1" });
+  eq([r.fileId, r.conflict], [firstId, false], "after loading, save updates the loaded file");
+});
+
+await test("large backup uses a resumable upload", async () => {
+  const big = { uid: "exp-big", name: "Big", image: "x".repeat(6 * 1024 * 1024) };
+  const r = await drive.backupExperiment(big);
+  assert(fd.requests.some((q) => q.url.includes("uploadType=resumable")), "resumable start");
+  eq(fd.files.get(r.fileId).content.length, JSON.stringify(big).length, "full content");
+});
+
+await test("retries 500, 429 and network errors; maps 403 quota", async () => {
+  fd.failures.push({ status: 500 }, { status: 429 }, { network: true });
+  eq((await drive.listBackups()).length, 5, "succeeds after retries");
+  fd.failures.push({ status: 403, body: { error: { message: "full", errors: [{ reason: "storageQuotaExceeded" }] } } });
+  await rejects(drive.backupExperiment({ uid: "q", name: "q" }), "quota", "quota");
+  fd.failures.push({ status: 503 }, { status: 503 }, { status: 503 }, { status: 503 });
+  await rejects(drive.listBackups(), "other", "gives up after 4 attempts");
+});
+
+await test("401 -> status expired; reconnect uses login_hint", async () => {
+  fd.token = "revoked-elsewhere";
+  await rejects(drive.listBackups(), "auth", "401");
+  eq(drive.getStatus(), "expired", "status");
+  eq(drive.isConnected(), false, "isConnected");
+  await rejects(drive.listBackups(), "auth", "no token afterwards");
+  await drive.connect();
+  eq(drive.getStatus(), "connected", "reconnected");
+  eq(gis.calls.at(-1).opts, { prompt: "", login_hint: "lab@example.org" }, "silent reconnect hint");
+});
+
+await test("token expiry timer flips status to expired (~1 h token, 60 s margin)", async () => {
+  await drive.disconnect();
+  gis.next = { expires_in: 61 };
+  await drive.connect();
+  eq(drive.getStatus(), "connected", "connected");
+  await until(() => drive.getStatus() === "expired", 2500);
+  await rejects(drive.listBackups(), "auth", "expired token");
+  gis.next = { expires_in: 3600 };
+  await drive.connect();
+});
+
+await test("deleted Backups folder is recreated", async () => {
+  fd.byName("Backups")[0].trashed = true;
+  const r = await drive.backupExperiment({ uid: "exp-3", name: "Third" });
+  const live = fd.byName("Backups").filter((f) => !f.trashed);
+  eq(live.length, 1, "new Backups folder");
+  eq(fd.files.get(r.fileId).parents, [live[0].id], "saved into it");
+});
+
+let captureId;
+await test("uploadCapture offline: downscaled JPEG queued in IndexedDB, sent on 'online'", async () => {
+  online = false;
+  const before = fd.requests.length;
+  await drive.uploadCapture(await pngBlob(4000, 3000), { strain: "PA14", sample: "S-12", notes: "37 °C" });
+  const q = await drive.queuedCaptures();
+  eq(q.length, 1, "queued");
+  captureId = q[0].id;
+  eq([q[0].sidecar.width, q[0].sidecar.height], [3000, 2250], "downscaled to 3000 px");
+  assert(q[0].sidecar.thumbnail.startsWith("data:image/jpeg"), "thumbnail");
+  await wait(50);
+  eq(fd.requests.length, before, "no request while offline");
+  const dbs = (await indexedDB.databases?.()) ?? [{ name: DB }];
+  assert(dbs.some((d) => d.name === DB), "own IndexedDB database");
+  online = true;
+  window.dispatchEvent(new Event("online"));
+  await until(async () => (await drive.queuedCaptures()).length === 0);
+  const inbox = fd.byName("Inbox")[0];
+  const parts = [...fd.files.values()].filter((f) => f.appProperties.capture === captureId);
+  eq(parts.map((f) => f.appProperties.role).sort(), ["image", "meta"], "photo + sidecar");
+  assert(parts.every((f) => f.parents[0] === inbox.id), "in Inbox");
+  const img = parts.find((f) => f.appProperties.role === "image"), meta = parts.find((f) => f.appProperties.role === "meta");
+  eq([img.content[0], img.content[1]], [0xff, 0xd8], "JPEG bytes");
+  assert(img.createdTime < meta.createdTime, "sidecar uploaded last");
+  assert(/^\d{4}-\d\d-\d\d \d{6} PA14 S-12 [0-9a-f]{8}\.jpg$/.test(img.name), img.name);
+  const side = JSON.parse(fd.text(meta));
+  eq([side.format, side.image, side.strain, side.device], ["motilityj-capture", img.id, "PA14", "Lab PC"], "sidecar");
+});
+
+await test("interrupted capture: error kept in queue, retry reuses the uploaded photo", async () => {
+  // Fail the sidecar (second upload of this capture) once.
+  let uploads = 0;
+  fd.failures.push({ status: 400, body: { error: { message: "boom" } }, when: (m, u) => m === "POST" && u.pathname === "/upload/drive/v3/files" && ++uploads === 2 });
+  await drive.uploadCapture(await pngBlob(800, 600), { strain: "WT" });
+  await until(async () => (await drive.queuedCaptures())[0]?.status === "error");
+  const [item] = await drive.queuedCaptures();
+  eq([item.attempts, /boom/.test(item.error)], [1, true], "error recorded");
+  const id = item.id;
+  await drive.processQueue();
+  eq((await drive.queuedCaptures()).length, 0, "sent on retry");
+  const parts = [...fd.files.values()].filter((f) => f.appProperties.capture === id);
+  eq(parts.map((f) => f.appProperties.role).sort(), ["image", "meta"], "one photo, one sidecar");
+});
+
+await test("auth failure keeps the capture pending; reconnect sends it", async () => {
+  fd.token = "bad";
+  await drive.uploadCapture(await pngBlob(300, 200), { strain: "X" });
+  await until(() => drive.getStatus() === "expired");
+  await until(async () => (await drive.queuedCaptures())[0]?.status === "pending");
+  await drive.connect();
+  await until(async () => (await drive.queuedCaptures()).length === 0);
+});
+
+await test("listInbox, downloadFile, markProcessed", async () => {
+  const items = await drive.listInbox();
+  eq(items.length, 3, "3 complete captures");
+  const it = items.find((i) => i.sidecar.id === captureId);
+  assert(it && it.name.endsWith(".jpg") && it.thumbnailLink && it.sidecarId, JSON.stringify(it && { ...it, sidecar: 0 }));
+  eq(it.sidecar.sample, "S-12", "sidecar fields");
+  const blob = await drive.downloadFile(it.id);
+  eq([...new Uint8Array(await blob.slice(0, 2).arrayBuffer())], [0xff, 0xd8], "photo bytes");
+  // An image without its sidecar (upload in progress) is not listed.
+  fd.add({ name: "partial.jpg", mimeType: "image/jpeg", parents: [fd.byName("Inbox")[0].id], appProperties: { capture: "zzz", role: "image" } });
+  eq((await drive.listInbox()).length, 3, "incomplete capture hidden");
+  await drive.markProcessed(it);
+  const processed = fd.byName("Processed")[0].id;
+  eq([fd.files.get(it.id).parents, fd.files.get(it.sidecarId).parents], [[processed], [processed]], "moved to Processed");
+  eq((await drive.listInbox()).length, 2, "gone from inbox");
+});
+
+await test("offline request -> DriveError offline; removeQueuedCapture", async () => {
+  online = false;
+  await rejects(drive.listBackups(), "offline", "offline");
+  await drive.uploadCapture(await pngBlob(10, 10), {});
+  const [q] = await drive.queuedCaptures();
+  let changed = 0;
+  const off = drive.onQueueChange(() => changed++);
+  await drive.removeQueuedCapture(q.id);
+  off();
+  eq([(await drive.queuedCaptures()).length, changed], [0, 1], "removed");
+  online = true;
+});
+
+await test("disconnect revokes the token; only googleapis.com was contacted", async () => {
+  const t = fd.token;
+  await drive.disconnect();
+  eq(drive.getStatus(), "disconnected", "status");
+  assert(gis.revoked.includes(t), "revoked");
+  assert(fd.requests.every((q) => new URL(q.url).hostname === "www.googleapis.com"), "hosts");
+  assert(statuses.includes("expired") && statuses.includes("error"), "status events emitted");
+});
+
+const failed = results.filter((r) => !r.ok);
+const summary = document.getElementById("summary");
+summary.textContent = failed.length ? `${failed.length} of ${results.length} FAILED` : `All ${results.length} tests passed`;
+summary.className = failed.length ? "fail" : "pass";
+window.__done = true;
+</script>
+</body>
+</html>
