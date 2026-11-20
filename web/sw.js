@@ -2,7 +2,7 @@
 // fills in the list of app files and a version hash of their content: run it after changing any file.
 // It precaches the whole app so that it starts and analyses images offline. Each version has its own
 // cache; a new version waits until the page asks it to take over ("Reload" in the app).
-const VERSION = "91436d77a197";
+const VERSION = "0d1fac1836d9";
 const FILES = [
  "css/styles.css",
  "icons/apple-touch-icon.png",
@@ -11,7 +11,11 @@ const FILES = [
  "icons/icon-512.png",
  "icons/maskable-512.png",
  "index.html",
+ "js/analysis/core.js",
+ "js/analysis/eval.html",
  "js/analysis/index.js",
+ "js/analysis/models.json",
+ "js/analysis/worker.js",
  "js/analyze.js",
  "js/app.js",
  "js/config.js",
@@ -19,6 +23,7 @@ const FILES = [
  "js/dom.js",
  "js/drive-ui.js",
  "js/drive.js",
+ "js/drive.mock-test.html",
  "js/export.js",
  "js/geometry.js",
  "js/i18n.js",
@@ -32,7 +37,8 @@ const FILES = [
  "js/tiff.js",
  "js/ui.js",
  "js/xlsx.js",
- "manifest.webmanifest"
+ "manifest.webmanifest",
+ "privacy.html"
 ];
 const CACHE = `motilityj-${VERSION}`;
 const scope = new URL(self.registration.scope);
