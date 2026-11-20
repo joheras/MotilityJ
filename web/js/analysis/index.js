@@ -17,14 +17,49 @@
 // complete -> π (plateDiameterMm/2)², incomplete -> areaPx * mmPerPx².
 // The user can always override klass and redraw the contour by hand.
 
+// Implementation: the pipeline lives in core.js (pure JS) and runs in a module Web Worker (worker.js);
+// model weights are in models.json. See README.md for the method and its measured accuracy.
+// Extra field: growthContour is the segmented outline even when klass is "complete" (for UI overrides).
+
+let worker = null, nextId = 0;
+const pending = new Map();
+
+function getWorker() {
+  if (worker) return worker;
+  worker = new Worker(new URL("./worker.js", import.meta.url), { type: "module" });
+  worker.onmessage = (e) => {
+    const { id, progress, result, error } = e.data;
+    const p = pending.get(id);
+    if (!p) return;
+    if (progress) return p.onProgress?.(...progress);
+    pending.delete(id);
+    error ? p.reject(new Error(error)) : p.resolve(result);
+  };
+  worker.onerror = (e) => {
+    for (const p of pending.values()) p.reject(new Error(e.message || "analysis worker failed"));
+    pending.clear();
+    worker = null;
+  };
+  return worker;
+}
+
+// Fallback when module workers are unavailable: same code on the main thread.
+async function analyzeHere(imageData, options) {
+  const [{ analyzeGray, rgbaToGray }, models] = await Promise.all([
+    import("./core.js"),
+    fetch(new URL("./models.json", import.meta.url)).then((r) => r.json()),
+  ]);
+  const { width, height, data } = imageData;
+  return analyzeGray(rgbaToGray(data, width * height), width, height, models, options.onProgress);
+}
+
 export async function analyzeImage(imageData, options = {}) {
-  // Placeholder until the real algorithm lands: a centred circle of a quarter of the image.
-  const r = Math.min(imageData.width, imageData.height) / 2;
-  const cx = imageData.width / 2, cy = imageData.height / 2;
-  const contour = Array.from({ length: 64 }, (_, i) => {
-    const a = (i / 64) * 2 * Math.PI;
-    return [cx + (r / 4) * Math.cos(a), cy + (r / 4) * Math.sin(a)];
+  let w;
+  try { w = getWorker(); } catch { return analyzeHere(imageData, options); }
+  const id = nextId++;
+  const buffer = imageData.data.slice().buffer; // copy: the caller keeps its ImageData
+  return new Promise((resolve, reject) => {
+    pending.set(id, { resolve, reject, onProgress: options.onProgress });
+    w.postMessage({ id, width: imageData.width, height: imageData.height, buffer }, [buffer]);
   });
-  options.onProgress?.(1, "done");
-  return { klass: "incomplete", confidence: 0, plate: { cx, cy, r: r * 0.95 }, contour, areaPx: Math.PI * (r / 4) ** 2 };
 }
