@@ -1,4 +1,4 @@
-// Dependency-free .xlsx writer: one sheet, inline strings and numbers, bold header row,
+// Dependency-free .xlsx writer: one or more sheets, inline strings and numbers, bold header row,
 // packed in a ZIP without compression ("stored"), which every spreadsheet program reads.
 
 const enc = new TextEncoder();
@@ -87,8 +87,9 @@ const NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
 const REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
 const XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
 
-/** rows[0] is the header. Numbers are written as numbers with two decimals; everything else as text. */
-export function xlsxBlob(rows, { sheetName = "Results", widths = [] } = {}) {
+const STYLES = `${XML}<styleSheet xmlns="${NS}"><numFmts count="1"><numFmt numFmtId="164" formatCode="0.00"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+
+function sheetXml(rows, widths) {
   const sheetRows = rows.map((row, r) => `<row r="${r + 1}">${row.map((v, c) => {
     const ref = `${colName(c)}${r + 1}`;
     if (v == null || v === "") return "";
@@ -96,13 +97,30 @@ export function xlsxBlob(rows, { sheetName = "Results", widths = [] } = {}) {
     return `<c r="${ref}" t="inlineStr"${r === 0 ? ' s="1"' : ""}><is><t xml:space="preserve">${esc(v)}</t></is></c>`;
   }).join("")}</row>`).join("");
   const cols = widths.length ? `<cols>${widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join("")}</cols>` : "";
+  return `${XML}<worksheet xmlns="${NS}" xmlns:r="${REL}">${cols}<sheetData>${sheetRows}</sheetData></worksheet>`;
+}
+
+/** rows[0] is the header. Numbers are written as numbers with two decimals; everything else as text. */
+export function xlsxBlob(rows, { sheetName = "Results", widths = [] } = {}) {
+  return xlsxWorkbookBlob([{ name: sheetName, rows, widths }]);
+}
+
+/** sheets: [{ name, rows, widths? }] -> one workbook with a sheet per entry. */
+export function xlsxWorkbookBlob(sheets) {
+  const used = new Set();
+  const names = sheets.map((sh, i) => {
+    let n = String(sh.name || "").replace(/[\\/?*[\]:]/g, "-").slice(0, 31) || `Sheet${i + 1}`;
+    while (used.has(n.toLowerCase())) n = `${n.slice(0, 28)} ${i + 1}`;
+    used.add(n.toLowerCase());
+    return n;
+  });
   const files = [
-    { name: "[Content_Types].xml", data: `${XML}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>` },
+    { name: "[Content_Types].xml", data: `${XML}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${sheets.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>` },
     { name: "_rels/.rels", data: `${XML}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${REL}/officeDocument" Target="xl/workbook.xml"/></Relationships>` },
-    { name: "xl/workbook.xml", data: `${XML}<workbook xmlns="${NS}" xmlns:r="${REL}"><sheets><sheet name="${esc(sheetName.replace(/[\\/?*[\]:]/g, "-").slice(0, 31) || "Sheet1")}" sheetId="1" r:id="rId1"/></sheets></workbook>` },
-    { name: "xl/_rels/workbook.xml.rels", data: `${XML}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${REL}/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="${REL}/styles" Target="styles.xml"/></Relationships>` },
-    { name: "xl/styles.xml", data: `${XML}<styleSheet xmlns="${NS}"><numFmts count="1"><numFmt numFmtId="164" formatCode="0.00"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>` },
-    { name: "xl/worksheets/sheet1.xml", data: `${XML}<worksheet xmlns="${NS}" xmlns:r="${REL}">${cols}<sheetData>${sheetRows}</sheetData></worksheet>` },
+    { name: "xl/workbook.xml", data: `${XML}<workbook xmlns="${NS}" xmlns:r="${REL}"><sheets>${names.map((n, i) => `<sheet name="${esc(n)}" sheetId="${i + 1}" r:id="rId${i + 2}"/>`).join("")}</sheets></workbook>` },
+    { name: "xl/_rels/workbook.xml.rels", data: `${XML}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${REL}/styles" Target="styles.xml"/>${sheets.map((_, i) => `<Relationship Id="rId${i + 2}" Type="${REL}/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join("")}</Relationships>` },
+    { name: "xl/styles.xml", data: STYLES },
+    ...sheets.map((sh, i) => ({ name: `xl/worksheets/sheet${i + 1}.xml`, data: sheetXml(sh.rows, sh.widths || []) })),
   ];
   return new Blob([zip(files)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 }

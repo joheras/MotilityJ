@@ -33,7 +33,7 @@ export function showError(e) {
 }
 
 // ----------------------------------------------------------------- dialogs
-function modal(build) {
+export function modal(build) {
   return new Promise((resolve) => {
     const dlg = h("dialog", { class: "dialog" });
     const close = (v) => { dlg.close(); dlg.remove(); resolve(v); };

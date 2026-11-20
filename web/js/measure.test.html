@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>measure.js tests</title>
+<style>
+  body { font: 14px system-ui, sans-serif; margin: 24px; }
+  table { border-collapse: collapse; }
+  td, th { padding: 3px 10px; border-bottom: 1px solid #ddd; text-align: left; }
+  .ok { color: #1b7f3b; } .fail { color: #b3261e; font-weight: 600; }
+</style>
+</head>
+<body>
+<h1>measure.js tests</h1>
+<p id="summary">Running…</p>
+<table><thead><tr><th>Test</th><th>Result</th><th>Got</th><th>Expected</th></tr></thead><tbody id="rows"></tbody></table>
+<script type="module">
+import { runTests } from "./measure.test.js";
+const { passed, failed, results } = runTests();
+const summary = document.getElementById("summary");
+summary.textContent = failed ? `${failed} of ${passed + failed} tests failed` : `All ${passed} tests passed`;
+summary.className = failed ? "fail" : "ok";
+document.getElementById("rows").innerHTML = results.map((r) =>
+  `<tr><td>${r.name}</td><td class="${r.ok ? "ok" : "fail"}">${r.ok ? "ok" : "FAIL"}</td><td>${r.got}</td><td>${r.want}</td></tr>`).join("");
+</script>
+</body>
+</html>

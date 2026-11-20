@@ -1,12 +1,15 @@
-// Experiment page: add images (dropzone, file picker, camera), thumbnails, results table, analyse all, export.
+// Experiment page: add images (dropzone, file picker, camera), assay conditions, thumbnails, results table
+// (configurable columns, inline and bulk metadata editing), analyse all, export.
 import { analyseImages } from "../analyze.js";
 import * as db from "../db.js";
 import { fmtNumber, h } from "../dom.js";
 import { driveEnabled, importFromInbox, saveExperimentToDrive } from "../drive-ui.js";
-import { BACKUP_EXT, backupBlob, csvBlob, download, excelBlob, resultRows, safeFileName } from "../export.js";
-import { areaMm2 } from "../geometry.js";
+import { rowContext, visibleColumns } from "../columns.js";
+import { BACKUP_EXT, backupBlob, csvBlob, download, excelBlob, safeFileName, tidyTable } from "../export.js";
 import { t } from "../i18n.js";
 import { ACCEPT, importFile, isImageFile } from "../images.js";
+import { fieldDef, isEmpty } from "../metadata.js";
+import { assayCard, bulkEditDialog, columnsDialog, conflictWarning, formatMeta, metaInput } from "../metadata-ui.js";
 import { requestPersistence } from "../pwa.js";
 import { busy, confirmDialog, fileButton, idle, showError, toast } from "../ui.js";
 import { deleteExperimentAsk, renameExperiment } from "./experiments.js";
@@ -23,6 +26,7 @@ export async function render(view, { expId }, ctx) {
   }
   let images = [];
   const urls = [];
+  const selected = new Set();
 
   async function addFiles(files) {
     const list = files.filter(isImageFile);
@@ -34,7 +38,7 @@ export async function render(view, { expId }, ctx) {
         busy(t("importingN", { i: i + 1, n: list.length }), i / list.length);
         try {
           const fields = await importFile(list[i]);
-          await db.putImage({ id: db.newId(), experimentId: exp.id, name: list[i].name || `photo-${Date.now()}.jpg`, added: Date.now() + i, notes: "", result: null, ...fields });
+          await db.putImage({ id: db.newId(), experimentId: exp.id, name: list[i].name || `photo-${Date.now()}.jpg`, added: Date.now() + i, notes: "", meta: {}, result: null, ...fields });
         } catch (e) {
           errors.push(e.message === "unsupported" ? t("unsupportedFile", { name: list[i].name }) : `${list[i].name}: ${e.message}`);
         }
@@ -64,13 +68,41 @@ export async function render(view, { expId }, ctx) {
     await draw();
   }
 
-  function exportRows() { return resultRows(images, ctx.settings); }
+  async function saveAssay(meta) {
+    exp.meta = meta;
+    exp.updated = Date.now();
+    try { await db.putExperiment(exp); toast(t("assaySaved"), "ok"); } catch (e) { showError(e); }
+    await draw({ assayOpen: true });
+  }
+
+  async function bulkEdit() {
+    const list = images.filter((i) => selected.has(i.id));
+    if (!list.length) return;
+    const changes = await bulkEditDialog(list, exp);
+    if (!changes) return;
+    for (const img of list) {
+      img.meta = { ...img.meta, ...changes };
+      await db.putImage(img);
+    }
+    await db.touchExperiment(exp.id);
+    toast(t("bulkEdited", { n: list.length }), "ok");
+    await draw();
+  }
+
+  async function chooseColumns() {
+    const ids = await columnsDialog(ctx.settings);
+    if (!ids) return;
+    ctx.settings = { ...ctx.settings, resultColumns: ids === "reset" ? null : ids };
+    try { await db.saveSettings(ctx.settings); } catch (e) { showError(e); }
+    await draw();
+  }
 
   const camera = () => fileButton(h("span", null, "📷 ", t("takePhoto")), { accept: "image/*", capture: "environment", className: "button primary camera-button", onFiles: addFiles });
   const chooser = (cls = "button") => fileButton(t("chooseFiles"), { accept: ACCEPT, multiple: true, className: cls, onFiles: addFiles });
 
-  async function draw() {
+  async function draw({ assayOpen = false } = {}) {
     images = await db.listImages(exp.id);
+    for (const id of [...selected]) if (!images.some((i) => i.id === id)) selected.delete(id);
     urls.splice(0).forEach(URL.revokeObjectURL);
     const settings = ctx.settings;
     const pending = images.filter((i) => !i.result).length;
@@ -84,8 +116,8 @@ export async function render(view, { expId }, ctx) {
         h("p", { class: "muted" }, t("nImages", { n: images.length }), images.length ? ` · ${t("nAnalysed", { n: done, total: images.length })}` : "")),
       h("div", { class: "actions" },
         h("button", { class: pending ? "primary" : "", onclick: analyseAll, disabled: !images.length }, "▶ ", analyseLabel),
-        h("button", { onclick: () => download(excelBlob(exportRows(), exp.name), `${safeFileName(exp.name)}.xlsx`), disabled: !images.length }, t("exportExcel")),
-        h("button", { onclick: () => download(csvBlob(exportRows()), `${safeFileName(exp.name)}.csv`), disabled: !images.length }, t("exportCsv")),
+        h("button", { onclick: () => download(excelBlob(images, exp, settings), `${safeFileName(exp.name)}.xlsx`), disabled: !images.length, title: t("exportExcelHint") }, t("exportExcel")),
+        h("button", { onclick: () => download(csvBlob(tidyTable(images, exp, settings)), `${safeFileName(exp.name)}.csv`), disabled: !images.length, title: t("exportCsvHint") }, t("exportCsv")),
         h("button", { onclick: backup, title: t("backupHint") }, t("backup")),
         driveEnabled() ? h("button", { onclick: () => saveExperimentToDrive(exp) }, t("driveSave")) : null,
         h("button", { onclick: async () => { if (await renameExperiment(exp)) await draw(); } }, t("rename")),
@@ -113,31 +145,65 @@ export async function render(view, { expId }, ctx) {
         classBadge(img.result));
     });
 
+    const cols = visibleColumns(settings);
+    const warningSlot = h("div", { class: "warning-slot" }, conflictWarning(images, exp, settings));
+    const refreshWarning = () => warningSlot.replaceChildren(conflictWarning(images, exp, settings) || "");
+    const selectAll = h("input", { type: "checkbox", "aria-label": t("selectAll"), checked: images.length > 0 && selected.size === images.length,
+      onchange: () => { images.forEach((i) => (selectAll.checked ? selected.add(i.id) : selected.delete(i.id))); draw(); } });
+    selectAll.indeterminate = selected.size > 0 && selected.size < images.length;
+
+    const cell = (img, c, col) => {
+      if (col.kind === "notes") {
+        const notes = h("input", { class: "notes-input", value: img.notes || "", placeholder: t("addNote"), "aria-label": t("colNotes"),
+          onchange: async () => { img.notes = notes.value; await db.putImage(img); } });
+        return h("td", { class: "notes-cell" }, notes);
+      }
+      if (col.kind === "meta") {
+        const def = fieldDef(col.key);
+        const own = img.meta?.[col.key];
+        const inherited = isEmpty(own) ? formatMeta(col.key, c.eff[col.key]) : formatMeta(col.key, exp.meta?.[col.key]);
+        const input = metaInput(def, own, { className: "notes-input meta-input", placeholder: inherited,
+          onChange: async (v) => { img.meta = { ...img.meta, [col.key]: v }; await db.putImage(img); refreshWarning(); } });
+        input.setAttribute("aria-label", `${col.label()} · ${img.name}`);
+        return h("td", { class: "meta-cell" }, input);
+      }
+      const v = col.value(c);
+      return h("td", { class: "num" }, v == null ? (img.result ? "—" : "") : fmtNumber(v, col.digits));
+    };
+
     const rows = images.map((img) => {
-      const area = areaMm2(img, settings);
-      const notes = h("input", { class: "notes-input", value: img.notes || "", placeholder: t("addNote"), "aria-label": t("colNotes"),
-        onchange: async () => { img.notes = notes.value; await db.putImage(img); } });
-      return h("tr", null,
+      const c = rowContext(img, exp, settings);
+      const box = h("input", { type: "checkbox", checked: selected.has(img.id), "aria-label": t("selectImage", { name: img.name }),
+        onchange: () => { box.checked ? selected.add(img.id) : selected.delete(img.id); draw(); } });
+      return h("tr", { class: selected.has(img.id) ? "selected" : null },
+        h("td", { class: "sel-cell" }, box),
         h("td", { class: "file-cell" }, h("a", { href: `#/e/${exp.id}/i/${img.id}` }, img.name)),
         h("td", null, classBadge(img.result)),
-        h("td", { class: "num" }, area == null ? (img.result ? "—" : "") : fmtNumber(area)),
-        h("td", { class: "notes-cell" }, notes),
+        cols.map((col) => cell(img, c, col)),
         h("td", { class: "row-actions" }, h("button", { class: "small ghost danger", title: t("removeImage"), "aria-label": t("removeImage"),
           onclick: async () => {
             if (await confirmDialog(t("removeImageConfirm", { name: img.name }), { ok: t("remove"), danger: true })) { await db.deleteImage(img.id); await draw(); }
           } }, "✕")));
     });
 
+    const tableTools = h("div", { class: "table-tools" },
+      h("button", { class: "small", onclick: bulkEdit, disabled: !selected.size, title: t("bulkEditHint") }, "✎ ", selected.size ? t("bulkEditN", { n: selected.size }) : t("bulkEdit")),
+      h("button", { class: "small", onclick: chooseColumns }, "▦ ", t("columns")));
+
+    const diam = exp.meta?.plateDiameterMm > 0 ? exp.meta.plateDiameterMm : settings.plateDiameterMm;
     const results = h("section", { class: "card" },
       h("div", { class: "section-head" },
         h("h2", null, t("results")),
         images.length ? h("span", { class: "muted small" }, t("summary", { c: nComplete, i: done - nComplete, p: pending })) : null),
+      warningSlot,
+      images.length ? tableTools : null,
       images.length
         ? h("div", { class: "table-wrap" }, h("table", { class: "results" },
-          h("thead", null, h("tr", null, h("th", null, t("colFile")), h("th", null, t("colClass")), h("th", { class: "num" }, t("colArea")), h("th", null, t("colNotes")), h("th"))),
+          h("thead", null, h("tr", null, h("th", { class: "sel-cell" }, selectAll), h("th", null, t("colFile")), h("th", null, t("colClass")),
+            cols.map((col) => h("th", { class: col.num ? "num" : null, title: col.label() }, col.header())), h("th"))),
           h("tbody", null, rows)))
         : h("p", { class: "muted" }, t("noImagesYet")),
-      images.length ? h("p", { class: "muted small" }, t("areaNote", { d: settings.plateDiameterMm }),
+      images.length ? h("p", { class: "muted small" }, t("areaNote", { d: diam }),
         settings.manualPxPerMm > 0 ? ` ${t("manualScaleActive", { s: settings.manualPxPerMm })}` : "", " ", h("a", { href: "#/settings" }, t("settings"))) : null);
 
     const gallery = images.length ? h("section", { class: "card" }, h("h2", null, t("images")), h("div", { class: "plates" }, thumbs)) : null;
@@ -148,7 +214,7 @@ export async function render(view, { expId }, ctx) {
 
     view.replaceChildren(
       h("div", { class: "crumbs" }, h("a", { href: "#/" }, t("experiments")), " › ", exp.name),
-      head, addCard, results, gallery, bottom);
+      head, assayCard(exp, settings, saveAssay, { open: assayOpen }), addCard, results, gallery, bottom);
   }
 
   async function backup() {

@@ -1,9 +1,9 @@
-// Help: workflow, review and editing, AI outline, area, phones/install/offline, data and privacy.
+// Help: workflow, review and editing, AI outline, Deep-Motility, area, measurements, assay metadata, phones/install/offline, data and privacy.
 import { h } from "../dom.js";
 import { t } from "../i18n.js";
 import { canInstall, isPersisted, isStandalone, promptInstall } from "../pwa.js";
 
-const SECTIONS = ["workflow", "review", "sam", "deepmotility", "area", "formats", "install", "privacy"];
+const SECTIONS = ["workflow", "review", "sam", "deepmotility", "area", "measures", "metadata", "formats", "install", "privacy"];
 
 export async function render(view, { section }) {
   const install = h("div");
