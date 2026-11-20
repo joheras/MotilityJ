@@ -3,14 +3,18 @@
 // experiment = { id, name, created, updated }
 // experiment.meta = assay defaults, image.meta = per-image metadata and overrides (see metadata.js)
 // image = { id, experimentId, name, blob, thumb, width, height, origWidth, origHeight, scale, added,
-//           notes, meta, result: null | { klass, confidence, plate, contour, areaPx, edited, analysedAt } }
+//           notes, meta, result: null | { klass, confidence, plate, contour, areaPx, edited, analysedAt },
+//           capturedAt?, seriesId?, timeH? }
 //   scale = width / origWidth (the stored image may be downscaled; coordinates are in stored pixels)
+//   capturedAt = capture time in ms (EXIF DateTimeOriginal, else the file's lastModified), recorded at import
+//   seriesId / timeH = plate series the image belongs to and its time point in hours (see series.js)
+// series = { id, experimentId, name, created, params } : one physical plate photographed over time
 
 import { DEFAULT_PLATE_DIAMETER_MM } from "./config.js";
 import { normalizeExperiment, normalizeImage } from "./metadata.js";
 
 const DB_NAME = "motilityj";
-const DB_VERSION = 2;
+const DB_VERSION = 2; // 2: per-image assay metadata (migrated) + series store (time series of one plate)
 let dbPromise = null;
 
 function open() {
@@ -25,6 +29,9 @@ function open() {
       }
       if (!db.objectStoreNames.contains("settings")) db.createObjectStore("settings", { keyPath: "key" });
       if (e.oldVersion >= 1 && e.oldVersion < 2) migrateMetadata(req.transaction);
+      if (!db.objectStoreNames.contains("series")) {
+        db.createObjectStore("series", { keyPath: "id" }).createIndex("experimentId", "experimentId");
+      }
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -86,10 +93,12 @@ export async function touchExperiment(id) {
 }
 
 export function deleteExperiment(id) {
-  return run(["experiments", "images"], "readwrite", async (tx) => {
+  return run(["experiments", "images", "series"], "readwrite", async (tx) => {
     tx.objectStore("experiments").delete(id);
     const keys = await done(tx.objectStore("images").index("experimentId").getAllKeys(id));
     for (const k of keys) tx.objectStore("images").delete(k);
+    const series = await done(tx.objectStore("series").index("experimentId").getAllKeys(id));
+    for (const k of series) tx.objectStore("series").delete(k);
   });
 }
 
@@ -103,6 +112,25 @@ export const getImage = async (id) => normalizeImage(await run("images", "readon
 export const putImage = (img) => run("images", "readwrite", (tx) => done(tx.objectStore("images").put(img)));
 export const deleteImage = (id) => run("images", "readwrite", (tx) => done(tx.objectStore("images").delete(id)));
 
+// ------------------------------------------------------------------ series
+export async function listSeries(experimentId) {
+  const all = await run("series", "readonly", (tx) => done(tx.objectStore("series").index("experimentId").getAll(experimentId)));
+  return all.sort((a, b) => a.created - b.created || a.name.localeCompare(b.name, undefined, { numeric: true }));
+}
+export const getSeries = (id) => run("series", "readonly", (tx) => done(tx.objectStore("series").get(id)));
+export const putSeries = (series) => run("series", "readwrite", (tx) => done(tx.objectStore("series").put(series)));
+
+/** Deletes a series; its images stay in the experiment (they keep their time, timeH). */
+export function deleteSeries(id) {
+  return run(["series", "images"], "readwrite", async (tx) => {
+    const series = await done(tx.objectStore("series").get(id));
+    tx.objectStore("series").delete(id);
+    if (!series) return;
+    const images = await done(tx.objectStore("images").index("experimentId").getAll(series.experimentId));
+    for (const img of images) if (img.seriesId === id) { img.seriesId = null; tx.objectStore("images").put(img); }
+  });
+}
+
 // ---------------------------------------------------------------- settings
 // resultColumns: ids of the optional columns shown in the results table (null = default set, see columns.js).
 const DEFAULT_SETTINGS = { plateDiameterMm: DEFAULT_PLATE_DIAMETER_MM, manualPxPerMm: null, resultColumns: null };
@@ -115,8 +143,9 @@ export const saveSettings = (value) =>
   run("settings", "readwrite", (tx) => done(tx.objectStore("settings").put({ key: "settings", value })));
 
 export async function clearAll() {
-  await run(["experiments", "images"], "readwrite", (tx) => {
+  await run(["experiments", "images", "series"], "readwrite", (tx) => {
     tx.objectStore("experiments").clear();
     tx.objectStore("images").clear();
+    tx.objectStore("series").clear();
   });
 }

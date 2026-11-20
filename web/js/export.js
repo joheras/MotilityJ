@@ -62,6 +62,7 @@ async function experimentEntry(exp) {
   const images = await db.listImages(exp.id);
   return {
     ...exp,
+    series: (await db.listSeries(exp.id)).map(({ experimentId, ...rest }) => rest),
     images: await Promise.all(images.map(async ({ blob, thumb, experimentId, ...rest }) => ({
       ...rest, blob: await blobToDataUrl(blob), thumb: thumb ? await blobToDataUrl(thumb) : null,
     }))),
@@ -92,9 +93,15 @@ export async function restoreBackup(data) {
     const now = Date.now();
     const exp = normalizeExperiment({ id: db.newId(), name: e.name || t("untitled"), created: e.created || now, updated: now, meta: e.meta });
     await db.putExperiment(exp);
+    const seriesIds = new Map(); // time series: ids of the backup -> new ids (older backups have none)
+    for (const s of e.series || []) {
+      const id = db.newId();
+      seriesIds.set(s.id, id);
+      await db.putSeries({ ...s, id, experimentId: exp.id });
+    }
     for (const im of e.images || []) {
       await db.putImage(normalizeImage({
-        ...im, id: db.newId(), experimentId: exp.id,
+        ...im, id: db.newId(), experimentId: exp.id, seriesId: seriesIds.get(im.seriesId) ?? null,
         blob: await dataUrlToBlob(im.blob), thumb: im.thumb ? await dataUrlToBlob(im.thumb) : null,
       }));
     }

@@ -106,6 +106,45 @@ const en = {
   samEmpty: "Segment Anything found nothing there: try a box or another point.",
   samUnsupported: "This browser cannot run the AI outline tool (needs Web Workers, WebAssembly and the Cache API).",
 
+  // time series (series-ui.js, pages/series.js, series-export.js)
+  timeSeries: "Time series",
+  timeSeriesLead: "Group the photos of one plate taken over time to follow its expansion: overlay of the outlines, area and radius vs time, expansion rate, lag and time to coverage.",
+  noSeries: "No series yet. Select the photos of one plate with Group as series, or detect series from file names such as plate1_t05h.jpg.",
+  groupAsSeries: "Group as series", detectSeries: "Detect from file names",
+  seriesDetected: "{n} series created from the file names.", noSeriesDetected: "No file names with a time point (e.g. _t05h, -30min) shared by two or more images.",
+  seriesName: "Series name", defaultSeriesName: "Plate {n}", nFrames: "{n} frame(s)",
+  selectFrames: "Images of the plate (at least 2)", selectAtLeast2: "Select at least two images.",
+  inSeries: "in {name}", timeSource: "Time of each image",
+  timeFromName: "From the file names (_t05h, -30min, 2d…)", timeFromCapture: "From the capture time (photo EXIF, else file date), relative to the first",
+  timeInterval: "Every … hours, in file-name order", timeKeep: "Keep the current times (set them later)",
+  intervalH: "Interval (h)", seriesCreated: "Series “{name}” created with {n} images.",
+  kineticsExcel: "Kinetics Excel", kineticsCsv: "Kinetics CSV", kineticsSheet: "Kinetics",
+  deleteSeries: "Ungroup", deleteSeriesConfirm: "Ungroup the series “{name}”? The images stay in the experiment.",
+  renameSeries: "Rename series", openSeries: "Open",
+  seriesOverlay: "Overlay", seriesOverlayHint: "Outlines of every time point registered on the plate circle of the last photo, from early (violet) to late (yellow).",
+  frameN: "Frame {i} of {n}", play: "Play", pause: "Pause", showAllContours: "All outlines", showFrameImage: "Photo of the frame",
+  notRegistered: "The plate circle of this frame was not detected: it is shown without registration.",
+  kinetics: "Kinetics", areaVsTime: "Area (mm²) vs time (h)", radiusVsTime: "Equivalent radius √(A/π) (mm) vs time (h)",
+  timeH: "Time (h)", eqRadius: "Eq. radius (mm)", rateAreaShort: "mm²/h", rateRadiusShort: "mm/h",
+  rateAreaCol: "Rate (mm²/h)", rateRadiusCol: "Rate (mm/h)",
+  fitWindow: "Linear fit window (h)", fitFrom: "from", fitTo: "to", auto: "auto",
+  lagThreshold: "Lag threshold (mm² above the inoculum)", inoculumArea: "Inoculum area (mm²)", inoculumAuto: "first frame",
+  statFitArea: "Expansion rate (area)", statFitRadius: "Expansion rate (radius)", statMax: "Maximum rate (frame to frame)",
+  statLag: "Lag time", statCoverage: "Time to complete coverage", statFinal: "Final area", r2: "R²",
+  statNone: "—", notCovered: "not reached", hUnit: "{v} h", between: "between {a} and {b} h",
+  statsHelp: "Rates are least-squares slopes over the fit window (by default all incomplete frames). Complete frames count as the whole plate. Lag: first time the area exceeds the inoculum by the threshold (interpolated). Coverage: before the first complete frame, extrapolated from the last expansion rate.",
+  frames: "Frames", setTimesFromNames: "Times from file names", setTimesFromCapture: "Times from capture time",
+  addToSeries: "Add images", addToSeriesTitle: "Add images to this series", removeFromSeries: "Remove from the series",
+  noTimesFound: "No time found for {n} image(s).", timesUpdated: "Times updated.",
+  framesSkipped: "{n} frame(s) without time or analysis are left out of the kinetics.",
+  needTwoFrames: "The kinetics need at least two analysed frames with a time.",
+  analysePending: "Analyse {n} pending",
+  kxSeries: "Series", kxRow: "Frame", kxTime: "Time (h)", kxRadius: "Eq. radius (mm)",
+  kxRateArea: "Rate area (mm2/h)", kxRateRadius: "Rate radius (mm/h)", kxFitWindow: "Fit window",
+  kxFitArea: "Fit rate area (mm2/h)", kxFitAreaR2: "Fit R2 area", kxFitRadius: "Fit rate radius (mm/h)", kxFitRadiusR2: "Fit R2 radius",
+  kxMaxArea: "Max rate area (mm2/h)", kxMaxRadius: "Max rate radius (mm/h)", kxLag: "Lag (h)", kxCoverage: "Time to coverage (h)",
+  kxSummary: "summary", kxSkipped: "left out: no time or not analysed",
+
   // settings
   measurement: "Measurement", plateDiameter: "Plate diameter (mm)",
   plateDiameterHelp: "Inner diameter of your Petri dishes; 90 mm by default. Used for the scale and for complete plates.",
@@ -187,6 +226,21 @@ const en = {
     <li>If the images of an experiment have a different assay type, agar % or plate diameter, a warning is shown above the table.</li>
   </ul>
   <p>Metadata is stored with the experiment, included in backups and exported in the tidy CSV and Excel sheet (columns such as <code>strain</code>, <code>agar_pct</code>, <code>equivalent_diameter_mm</code>), ready for R or Python.</p>`,
+  help_series_title: "Time series and expansion kinetics",
+  help_series_html: `<p>To measure how fast a strain spreads, photograph the <b>same plate</b> several times while it grows (for example every 30 min, or every 10 min with a scanner; a swarm usually covers a 9 cm plate in 10–20 h) and group the photos as a <b>series</b>.</p>
+  <ul>
+    <li><b>Group as series</b> (experiment page): select the photos of one plate. Their time comes from the <b>file names</b> (<code>plate1_t05h.jpg</code>, <code>A-30min.png</code>, <code>_2d</code>), from the <b>capture time</b> of the photos (EXIF, else the file date, relative to the first photo) or from a fixed interval. <b>Detect from file names</b> groups the images whose names differ only by the time. Times can be edited on the series page.</li>
+    <li>The <b>overlay</b> registers every frame on its detected plate circle (shift and scale to the last photo), so the outlines of all time points can be compared even if the plate moved a little.</li>
+    <li><b>Kinetics</b>: area and equivalent radius √(A/π) vs time; expansion rate in mm²/h and mm/h as the slope of a linear fit over a window you choose, and frame to frame; maximum rate; <b>lag time</b> (first time the area exceeds the inoculum by a threshold); <b>time to complete coverage</b> (first complete frame, interpolated). Complete frames count as the whole plate.</li>
+    <li><b>Kinetics Excel / CSV</b>: one row per frame and a summary row per series.</li>
+  </ul>
+  <h3>Photographing a series consistently</h3>
+  <ul>
+    <li>A <b>flatbed scanner</b> (lid open or with a dark cover, plates upside down) with a scheduled scan is the most reproducible option; otherwise fix the phone or camera on a stand at the same height, straight above the plate.</li>
+    <li>Keep the <b>position, distance, zoom and lighting</b> the same in every photo: mark the place of the plate, use the same dark background and avoid reflections and condensation on the lid.</li>
+    <li>Do not change the camera settings between photos and keep the whole rim of the dish visible: it is used for the scale and for the registration.</li>
+    <li>Name the files with the time (<code>strain_rep1_t02h.jpg</code>) or keep the original photo files so that their capture time can be read.</li>
+  </ul>`,
   help_formats_title: "Image formats",
   help_formats_html: `<p>JPEG, PNG, WebP and the other formats of your browser are read directly. <b>TIFF</b> files are read by MotilityJ itself: 8 or 16 bits, grey, RGB or palette, in strips or tiles, uncompressed or compressed with LZW, PackBits, Deflate (ZIP) or JPEG. Not supported: BigTIFF, separate colour planes, floating-point samples and old-style JPEG; convert those to PNG first. Only the first page of a multi-page TIFF is used. iPhone HEIC photos taken from the app are converted to JPEG by the phone.</p>
   <p>Images are stored reduced to at most 2000 pixels on the longest side, which is enough for the analysis and keeps the browser storage small. The manual scale (pixels per mm) refers to the original image.</p>`,

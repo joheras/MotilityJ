@@ -11,6 +11,7 @@ import { ACCEPT, importFile, isImageFile } from "../images.js";
 import { fieldDef, isEmpty } from "../metadata.js";
 import { assayCard, bulkEditDialog, columnsDialog, conflictWarning, formatMeta, metaInput } from "../metadata-ui.js";
 import { requestPersistence } from "../pwa.js";
+import { seriesCard } from "../series-ui.js";
 import { busy, confirmDialog, fileButton, idle, showError, toast } from "../ui.js";
 import { deleteExperimentAsk, renameExperiment } from "./experiments.js";
 
@@ -206,6 +207,7 @@ export async function render(view, { expId }, ctx) {
       images.length ? h("p", { class: "muted small" }, t("areaNote", { d: diam }),
         settings.manualPxPerMm > 0 ? ` ${t("manualScaleActive", { s: settings.manualPxPerMm })}` : "", " ", h("a", { href: "#/settings" }, t("settings"))) : null);
 
+    const series = await seriesCard(exp, images, settings, draw, urls);
     const gallery = images.length ? h("section", { class: "card" }, h("h2", null, t("images")), h("div", { class: "plates" }, thumbs)) : null;
 
     // Phones: main actions in a bar at the bottom of the screen.
@@ -214,7 +216,7 @@ export async function render(view, { expId }, ctx) {
 
     view.replaceChildren(
       h("div", { class: "crumbs" }, h("a", { href: "#/" }, t("experiments")), " › ", exp.name),
-      head, assayCard(exp, settings, saveAssay, { open: assayOpen }), addCard, results, gallery, bottom);
+      head, assayCard(exp, settings, saveAssay, { open: assayOpen }), addCard, results, series, gallery, bottom);
   }
 
   async function backup() {
