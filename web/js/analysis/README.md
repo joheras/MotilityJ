@@ -62,40 +62,40 @@ Segmentation is scored on the **test split** (313 labelled images, all incomplet
 
 | Metric | Value |
 |---|---|
-| mean IoU | **0.862** |
-| median IoU | 0.919 |
+| mean IoU | **0.863** |
+| median IoU | 0.912 |
 | mean Dice | **0.914** |
-| median relative area error | **4.4 %** |
-| mean relative area error | 29 % (dominated by a few failures, see below) |
-| test images wrongly classified "complete" | 8 / 313 |
+| median relative area error | **5.2 %** |
+| mean relative area error | 33 % (dominated by a few failures, see below) |
+| test images wrongly classified "complete" | 7 / 313 |
 
 | Growth / plate area | n | mIoU |
 |---|---|---|
-| < 2 % | 96 | 0.81 |
-| 2–10 % | 80 | 0.89 |
-| 10–30 % | 47 | 0.91 |
-| 30–60 % | 48 | 0.90 |
-| > 60 % | 42 | 0.83 |
+| < 2 % | 96 | 0.80 |
+| 2–10 % | 80 | 0.90 |
+| 10–30 % | 47 | 0.93 |
+| 30–60 % | 48 | 0.91 |
+| > 60 % | 42 | 0.81 |
 
 Classification is scored on the **valid split** (565 images: 228 complete, 337 incomplete).
 
 | Metric | Value |
 |---|---|
-| accuracy | **0.947** |
-| F1 (complete) | 0.936 |
-| F1 (incomplete) | 0.954 |
-| confusion | TP 221, TN 314, FP 23 (incomplete→complete), FN 7 |
+| accuracy | **0.956** |
+| F1 (complete) | 0.947 |
+| F1 (incomplete) | 0.962 |
+| confusion | TP 222, TN 318, FP 19 (incomplete→complete), FN 6 |
 
-The Python reference (`tools/train.py` pipeline) scores 0.859 mIoU and 0.950 accuracy on the same splits. The classification probabilities in JS and Python agree to three decimals; the small segmentation differences come from JPEG decoding and bilinear rounding. The Deep-Motility baseline was not available here, so there is no direct comparison.
+`tools/train.py` produced the shipped `models.json`. In Python it scores 0.862 mIoU (at 256 px) and 0.956 accuracy on the same splits. Spot checks of the classification probabilities agree between JS and Python to three decimals; the small segmentation differences come from JPEG decoding and bilinear rounding. The Deep-Motility baseline was not available here, so there is no direct comparison.
 
-**Speed.** On a desktop Chromium the median is 165 ms per image for the segmentation set (~1000 px images, including the worker round trip). The 90th percentile is 200 ms. Classification-set images take 71 ms. The cost does not depend on input size beyond the initial resampling. I estimate 0.5–0.8 s on a mid-range phone, but this was not measured on a device.
+**Speed.** On a desktop Chromium the median is 70–165 ms per image for the segmentation set (~1000 px images, including the worker round trip). The range covers two runs, with the browser pane hidden and visible; the 90th percentile is ≤ 200 ms. Classification-set images take 64–71 ms. The cost does not depend on input size beyond the initial resampling. I estimate 0.5–0.8 s on a mid-range phone, but this was not measured on a device.
 
 ## Known failure cases
 
-- **Halo vs. core ambiguity.** In a few images the label is the bright/dark core only, and a diffuse halo around it is excluded (e.g. G97c-0.3, G93b-0.3, G226b-0.3, IoU < 0.15). The model includes the halo, because other labels do include halos. These cases dominate the mean area error.
-- **Near-complete growth with a faint outer edge.** Examples: G118b-0.3, G77b-0.3, G40b-0.3 (2). The model stops at an inner ring and under-segments.
-- **Satellite colonies touching the main region.** Examples: G152c-0.5, G155a-0.5. They merge with it, giving over-segmentation.
-- **Tiny colonies (< 2 % of the plate).** These are only ~5 px across in the 128 px crop, so boundary errors weigh more (mIoU 0.81).
+- **Halo vs. core ambiguity.** In a few images the label is the bright/dark core only, and a diffuse halo around it is excluded (e.g. G97c-0.3, G93b-0.3, G226b-0.3, G215b-0.3, IoU < 0.15). The model includes the halo, because other labels do include halos. These cases dominate the mean area error.
+- **Near-complete growth with a faint outer edge.** Examples: G118b-0.3, G77b-0.3, G56a 0.5. The model stops at an inner ring and under-segments.
+- **Satellite colonies.** When they touch the main region they merge with it, giving over-segmentation (G152c-0.5, G155a-0.5). When a satellite lies closer to the centre than the real colony, or the real colony does not reach the central disc, the wrong component is chosen and IoU is about 0 (G188a-0.5, PA7 b 0.5, G155c-0.3).
+- **Tiny colonies (< 2 % of the plate).** These are only ~5 px across in the 128 px crop, so boundary errors weigh more (mIoU 0.80).
 - **Complete vs. incomplete.** Most errors are incomplete plates whose growth reaches the rim on most sides, with lobes at the edge (G51b/c, G4a, G60b, G144b). These are predicted complete, often with high confidence. The class boundary is subjective for such plates. Complete plates with a clear central region and satellite colonies are sometimes predicted incomplete.
 - **Plate detection** assumes the photo is cropped around the dish, like the datasets and the MotilityJ workflow: centre within ±5 % of the middle, diameter ≥ 76 % of the short side. Uncropped photos with a small dish will fail. The UI lets the user correct the result.
 
