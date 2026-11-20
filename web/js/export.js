@@ -1,0 +1,106 @@
+// Results export (CSV, Excel) and backup/restore of experiments (.motilityj.json).
+import * as db from "./db.js";
+import { areaMm2 } from "./geometry.js";
+import { t } from "./i18n.js";
+import { xlsxBlob } from "./xlsx.js";
+
+export const BACKUP_FORMAT = "motilityj-backup";
+export const BACKUP_EXT = ".motilityj.json";
+
+export function safeFileName(name) {
+  return (name || "motilityj").replace(/[\\/:*?"<>|\u0000-\u001f]+/g, "_").trim().slice(0, 120) || "motilityj";
+}
+
+export function download(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement("a"), { href: url, download: filename });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+export function resultRows(images, settings) {
+  const header = [t("colFile"), t("colClass"), t("colAreaPlain"), t("colNotes")];
+  const rows = images.map((img) => {
+    const area = areaMm2(img, settings);
+    return [img.name, img.result ? img.result.klass : "", area == null ? "" : Math.round(area * 100) / 100, img.notes || ""];
+  });
+  return [header, ...rows];
+}
+
+export function csvBlob(rows) {
+  const cell = (v) => {
+    const s = v == null ? "" : String(v);
+    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  // BOM so that Excel reads UTF-8 file names correctly.
+  return new Blob(["﻿" + rows.map((r) => r.map(cell).join(",")).join("\r\n") + "\r\n"], { type: "text/csv;charset=utf-8" });
+}
+
+export const excelBlob = (rows, sheetName) => xlsxBlob(rows, { sheetName, widths: [36, 14, 14, 40] });
+
+// ------------------------------------------------------------------ backup
+const blobToDataUrl = (blob) => new Promise((resolve, reject) => {
+  const r = new FileReader();
+  r.onload = () => resolve(r.result);
+  r.onerror = () => reject(r.error);
+  r.readAsDataURL(blob);
+});
+
+async function dataUrlToBlob(url) {
+  return (await fetch(url)).blob();
+}
+
+async function experimentEntry(exp) {
+  const images = await db.listImages(exp.id);
+  return {
+    ...exp,
+    images: await Promise.all(images.map(async ({ blob, thumb, experimentId, ...rest }) => ({
+      ...rest, blob: await blobToDataUrl(blob), thumb: thumb ? await blobToDataUrl(thumb) : null,
+    }))),
+  };
+}
+
+/** The content of a .motilityj.json file. `name` is the experiment name (single) or a generic name. */
+export async function makeBackup(experiments) {
+  return {
+    format: BACKUP_FORMAT,
+    version: 1,
+    name: experiments.length === 1 ? experiments[0].name : "MotilityJ",
+    exportedAt: new Date().toISOString(),
+    settings: await db.getSettings(),
+    experiments: await Promise.all(experiments.map(experimentEntry)),
+  };
+}
+
+export async function backupBlob(experiments) {
+  return new Blob([JSON.stringify(await makeBackup(experiments))], { type: "application/json" });
+}
+
+/** Adds the experiments of a backup as new experiments. Returns how many were added. */
+export async function restoreBackup(data) {
+  if (!data || data.format !== BACKUP_FORMAT || !Array.isArray(data.experiments)) throw new Error(t("restoreInvalid"));
+  let n = 0;
+  for (const e of data.experiments) {
+    const now = Date.now();
+    const exp = { id: db.newId(), name: e.name || t("untitled"), created: e.created || now, updated: now };
+    await db.putExperiment(exp);
+    for (const im of e.images || []) {
+      await db.putImage({
+        ...im, id: db.newId(), experimentId: exp.id,
+        blob: await dataUrlToBlob(im.blob), thumb: im.thumb ? await dataUrlToBlob(im.thumb) : null,
+      });
+    }
+    n++;
+  }
+  return n;
+}
+
+export async function readJsonFile(file) {
+  try {
+    return JSON.parse(await file.text());
+  } catch {
+    throw new Error(t("restoreInvalid"));
+  }
+}
