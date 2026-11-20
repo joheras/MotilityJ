@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy policy · MotilityJ</title>
+  <meta name="description" content="How the web version of MotilityJ handles your data and your Google Drive." />
+  <style>
+    :root { --bg: #f4f6f8; --surface: #fff; --text: #17202a; --muted: #5f6b78; --border: #dde3e9; --accent: #0f766e; color-scheme: light; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #0f1419; --surface: #182028; --text: #e6edf3; --muted: #93a1b0; --border: #2d3a46; --accent: #2dd4bf; color-scheme: dark; }
+    }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    main { max-width: 760px; margin: 0 auto; padding: 32px 16px 48px; }
+    article { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 24px clamp(16px, 4vw, 36px); margin-bottom: 24px; }
+    h1 { font-size: 1.7rem; line-height: 1.25; margin: 0 0 4px; }
+    h2 { font-size: 1.15rem; margin: 1.6em 0 0.4em; }
+    a { color: var(--accent); }
+    .muted { color: var(--muted); }
+    li { margin: 0.3em 0; }
+    code { font-size: 0.9em; overflow-wrap: anywhere; }
+    nav { display: flex; gap: 16px; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+<main>
+  <nav><a href="./">← MotilityJ</a><a href="#en">English</a><a href="#es">Español</a></nav>
+
+  <article id="en" lang="en">
+    <h1>Privacy policy</h1>
+    <p class="muted">MotilityJ web version (https://joheras.github.io/MotilityJ/) · Last updated 20 November 2026</p>
+
+    <p>MotilityJ is a free, open-source tool to measure bacterial motility on photos of Petri dishes. The web version
+      runs entirely in your browser. This page explains what happens to your data. The source code is public at
+      <a href="https://github.com/joheras/MotilityJ">github.com/joheras/MotilityJ</a>.</p>
+
+    <h2>Data processed in your browser</h2>
+    <ul>
+      <li>Photos of plates are analysed on your own device. They are not sent to any MotilityJ server: there is
+        none. The developers do not receive your images, results or any other data.</li>
+      <li>Experiments, images and results are stored in your browser's storage (IndexedDB) on your device. You can
+        delete them at any time from the app or by clearing the site data.</li>
+      <li>The app does not use cookies, analytics, advertising or tracking.</li>
+    </ul>
+
+    <h2>Google Drive (optional)</h2>
+    <p>If you click <b>Connect Google Drive</b>, the app loads Google's sign-in library from
+      <code>accounts.google.com</code> and asks Google for access with the permission
+      <code>https://www.googleapis.com/auth/drive.file</code> only. With it, MotilityJ can see, create and change
+      only the files that it has created itself in your Drive; it cannot read your other files.</p>
+    <ul>
+      <li><b>What is stored:</b> the backups you save (experiments, plate images and results) and the photos you send
+        from your phone with the strain, sample and notes you type. Everything is stored in the folder
+        <i>MotilityJ</i> of <b>your own</b> Google Drive, and nowhere else.</li>
+      <li><b>How it is used:</b> only to provide the features you use: saving and loading backups, and moving photos
+        from your phone to your computer. Your browser talks to Google directly; no one else receives the data.</li>
+      <li><b>Account data:</b> the app reads the e-mail address of the Google account only to show which account is
+        connected. It is not stored or sent anywhere.</li>
+      <li><b>Tokens:</b> the access token given by Google is kept in memory only while the page is open and expires
+        after about one hour. No passwords or refresh tokens are stored. Photos waiting to be uploaded are kept in
+        your browser until they are sent.</li>
+      <li><b>Sharing:</b> the data is never sold, shared with third parties, or used for advertising or to train
+        models. MotilityJ's use of information received from Google APIs adheres to the
+        <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data
+        Policy</a>, including the Limited Use requirements.</li>
+      <li><b>Removing access:</b> click <b>Disconnect</b> in the app, or remove MotilityJ at
+        <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>. The files in your
+        Drive stay there until you delete them.</li>
+    </ul>
+
+    <h2>Changes and contact</h2>
+    <p>Changes to this policy are published on this page. For questions, open an issue at
+      <a href="https://github.com/joheras/MotilityJ/issues">github.com/joheras/MotilityJ/issues</a>.</p>
+  </article>
+
+  <article id="es" lang="es">
+    <h1>Política de privacidad</h1>
+    <p class="muted">Versión web de MotilityJ (https://joheras.github.io/MotilityJ/) · Última actualización: 20 de noviembre de 2026</p>
+
+    <p>MotilityJ es una herramienta libre y de código abierto para medir la motilidad bacteriana en fotos de placas
+      de Petri. La versión web funciona por completo en tu navegador. Esta página explica qué ocurre con tus datos.
+      El código fuente es público en <a href="https://github.com/joheras/MotilityJ">github.com/joheras/MotilityJ</a>.</p>
+
+    <h2>Datos procesados en tu navegador</h2>
+    <ul>
+      <li>Las fotos de las placas se analizan en tu propio dispositivo. No se envían a ningún servidor de MotilityJ:
+        no existe ninguno. Los desarrolladores no reciben tus imágenes, resultados ni ningún otro dato.</li>
+      <li>Los experimentos, imágenes y resultados se guardan en el almacenamiento de tu navegador (IndexedDB) en tu
+        dispositivo. Puedes borrarlos cuando quieras desde la aplicación o borrando los datos del sitio.</li>
+      <li>La aplicación no usa cookies, analítica, publicidad ni seguimiento.</li>
+    </ul>
+
+    <h2>Google Drive (opcional)</h2>
+    <p>Si pulsas <b>Conectar Google Drive</b>, la aplicación carga la biblioteca de inicio de sesión de Google desde
+      <code>accounts.google.com</code> y pide a Google acceso sólo con el permiso
+      <code>https://www.googleapis.com/auth/drive.file</code>. Con él, MotilityJ sólo puede ver, crear y modificar
+      los archivos que ella misma ha creado en tu Drive; no puede leer el resto de tus archivos.</p>
+    <ul>
+      <li><b>Qué se guarda:</b> las copias de seguridad que guardes (experimentos, imágenes de placas y resultados)
+        y las fotos que envíes desde el móvil con la cepa, muestra y notas que escribas. Todo se guarda en la
+        carpeta <i>MotilityJ</i> de <b>tu propio</b> Google Drive, y en ningún otro sitio.</li>
+      <li><b>Para qué se usa:</b> sólo para las funciones que uses: guardar y cargar copias, y pasar fotos del móvil
+        al ordenador. Tu navegador habla directamente con Google; nadie más recibe los datos.</li>
+      <li><b>Datos de la cuenta:</b> la aplicación lee el correo de la cuenta de Google sólo para mostrar qué cuenta
+        está conectada. No se guarda ni se envía a ningún sitio.</li>
+      <li><b>Tokens:</b> el token de acceso que da Google se guarda sólo en memoria mientras la página está abierta
+        y caduca en una hora aproximadamente. No se guardan contraseñas ni tokens de refresco. Las fotos pendientes
+        de subir se guardan en tu navegador hasta que se envían.</li>
+      <li><b>Cesión:</b> los datos nunca se venden, se ceden a terceros ni se usan para publicidad o para entrenar
+        modelos. El uso por MotilityJ de la información recibida de las API de Google cumple la
+        <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data
+        Policy</a>, incluidos los requisitos de uso limitado (Limited Use).</li>
+      <li><b>Retirar el acceso:</b> pulsa <b>Desconectar</b> en la aplicación, o elimina MotilityJ en
+        <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>. Los archivos de tu
+        Drive siguen allí hasta que los borres.</li>
+    </ul>
+
+    <h2>Cambios y contacto</h2>
+    <p>Los cambios en esta política se publican en esta página. Para cualquier duda, abre una incidencia en
+      <a href="https://github.com/joheras/MotilityJ/issues">github.com/joheras/MotilityJ/issues</a>.</p>
+  </article>
+</main>
+</body>
+</html>
