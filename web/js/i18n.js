@@ -45,6 +45,35 @@ const en = {
   areaNote: "Areas use a plate diameter of {d} mm.", manualScaleActive: "Manual scale: {s} px/mm.",
   addNote: "Add a note", removeImage: "Remove image", removeImageConfirm: "Remove “{name}” from this experiment?",
 
+  // metadata and measurements (columns.js, metadata-ui.js)
+  meta_assayType: "Assay type", meta_agarPct: "Agar", meta_medium: "Medium", meta_plateVolumeMl: "Plate volume",
+  meta_dryingMin: "Drying time", meta_incubationTempC: "Incubation temperature", meta_incubationTimeH: "Incubation time",
+  meta_plateDiameterMm: "Plate diameter", meta_strain: "Strain", meta_condition: "Condition",
+  meta_bioRep: "Biological replicate", meta_techRep: "Technical replicate",
+  assay_swim: "Swim", assay_swarm: "Swarm", assay_twitch: "Twitch", assay_other: "Other",
+  m_areaMm2: "Area (mm²)", m_eqDiameterMm: "Equivalent diameter (mm)", m_feretMaxMm: "Max Feret (mm)", m_feretMinMm: "Min Feret (mm)",
+  m_perimeterMm: "Perimeter (mm)", m_circularity: "Circularity", m_coveragePct: "Plate covered (%)", m_centroidOffsetMm: "Centroid offset (mm)",
+  short_bioRep: "Bio. rep.", short_techRep: "Tech. rep.", short_incubationTimeH: "Time (h)", short_eqDiameterMm: "Eq. Ø (mm)",
+  short_feretMaxMm: "Feret max (mm)", short_feretMinMm: "Feret min (mm)", short_coveragePct: "Covered (%)", short_centroidOffsetMm: "Offset (mm)",
+  metadata: "Metadata", measurements: "Measurements", imageMetadata: "Strain, condition, replicates",
+  assayConditions: "Assay conditions", assayNotSet: "Not set: record them so results can be compared.",
+  assayLead: "Defaults for every image of this experiment; an image can override them. They are exported with each image, because motility results depend on them.",
+  assaySaved: "Assay conditions saved.", inherit: "default", fromSettings: "Settings",
+  overrideConditions: "Different assay conditions for this image",
+  overrideHelp: "Leave empty to use the experiment's value (shown in grey).",
+  columns: "Columns", columnsTitle: "Columns of the results table", columnsReset: "Default columns",
+  selectAll: "Select all images", selectImage: "Select {name}",
+  bulkEdit: "Edit metadata", bulkEditN: "Edit metadata of {n}", bulkEditHint: "Select images with the boxes on the left, then set their metadata at once",
+  bulkEditTitle: "Metadata of {n} image(s)", bulkApply: "Apply this field", bulkApplyButton: "Apply",
+  bulkEditHelp: "Only the ticked fields are changed; a field is ticked when you edit it. A ticked empty field clears the value.",
+  multipleValues: "(several values)", bulkEdited: "Metadata of {n} image(s) updated.",
+  conflictTitle: "Conditions differ between images.",
+  conflictLead: "Motility depends strongly on the assay; compare these images with care:",
+  conflictUnset: "(and some images without a value)",
+  exportExcelHint: "Excel workbook: the results as shown and a tidy sheet with all metadata and measurements",
+  exportCsvHint: "Tidy CSV: one row per image with all metadata and measurements",
+  sheetResults: "Results", sheetTidy: "Tidy data",
+
   // review page
   zoomIn: "Zoom in", zoomOut: "Zoom out", zoomFit: "Fit image",
   legendPlate: "Plate", legendGrowth: "Growth",
@@ -96,7 +125,8 @@ const en = {
     <li><b>Add images</b>: drop them on the box, <b>Choose files</b> (several at once) or, on a phone or tablet, <b>Take photo</b> to use the camera.</li>
     <li><b>Analyse all</b>: each image is classified as <span class="badge cat-s">complete</span> (the growth covers the whole plate) or <span class="badge cat-i">incomplete</span>, and the growth is outlined.</li>
     <li><b>Review</b>: open an image to check the result, change the class or correct the outline and the plate circle. Corrections are saved automatically.</li>
-    <li><b>Export</b> the table <i>File · Class · Area (mm²) · Notes</i> to <b>Excel</b> or <b>CSV</b>.</li>
+    <li>Record the <b>assay conditions</b> of the experiment and the <b>strain, condition and replicates</b> of each image (see <a href="#/help/metadata">Assay metadata</a>).</li>
+    <li><b>Export</b> to <b>Excel</b> (the table as shown plus a tidy sheet) or <b>CSV</b> (tidy: one row per image with all metadata and measurements).</li>
   </ol>
   <p>Photograph the plates from above, centred, on a dark uniform background, without reflections; the whole rim of the dish must be visible.</p>`,
   help_review_title: "Reviewing and correcting",
@@ -113,7 +143,27 @@ const en = {
   <ul>
     <li><b>Complete</b>: area = π × (diameter / 2)², e.g. 6361.73 mm² for a 90 mm plate.</li>
     <li><b>Incomplete</b>: area = area of the outline in pixels × (mm per pixel)². It is recomputed as soon as you edit the outline or the plate circle.</li>
-  </ul>`,
+  </ul>
+  <p>The plate diameter of an experiment's <b>assay conditions</b>, or of an image, replaces the one of Settings for those images.</p>`,
+  help_measures_title: "Measurements",
+  help_measures_html: `<p>Besides the area, MotilityJ measures the shape of the growth outline (after your corrections). Choose which ones the results table shows with <b>Columns</b>; the exports always include all of them.</p>
+  <ul>
+    <li><b>Equivalent diameter</b> = 2√(area/π): the diameter of a circle with the same area. Swim assays are usually reported as a zone diameter; this makes irregular zones comparable to it.</li>
+    <li><b>Max Feret</b> and <b>Min Feret</b>: the largest and the smallest distance between two parallel lines touching the outline (caliper diameters). Their ratio shows how elongated the zone is.</li>
+    <li><b>Perimeter</b> of the outline, and <b>circularity</b> = 4π·area/perimeter²: 1 for a circle, lower for elongated or branched (e.g. dendritic swarm) edges. The perimeter depends on how detailed the outline is, so compare circularity between images analysed the same way.</li>
+    <li><b>Plate covered</b>: area of the growth / area of the plate circle, in %.</li>
+    <li><b>Centroid offset</b>: distance from the centre of the plate to the centroid of the growth; large values point to an off-centre inoculation or a tilted plate.</li>
+  </ul>
+  <p>For a <b>complete</b> plate all of them refer to the plate circle: the diameters are the plate diameter, circularity is 1, the plate is 100 % covered and the offset is 0.</p>`,
+  help_metadata_title: "Assay metadata",
+  help_metadata_html: `<p>There is no standard motility assay: the zone depends on the <b>assay type</b> (swim, usually ≤ 0.3 % agar; swarm, about 0.4–0.8 %; twitch, about 1 % at the plate bottom), the <b>agar %</b>, the medium, the plate volume, how long the plates dried, the temperature and the incubation time, as well as the strain and the replicate. Record them so that your results can be compared and reported.</p>
+  <ul>
+    <li><b>Assay conditions</b> (experiment page): the defaults of every image of the experiment, including the plate diameter.</li>
+    <li><b>Per image</b>: strain, condition, biological and technical replicate and incubation time, in the results table or on the review page. An image can also override any assay condition (e.g. a different agar %).</li>
+    <li><b>Bulk edit</b>: tick several images in the results table and press <b>Edit metadata</b>; only the fields you change are applied.</li>
+    <li>If the images of an experiment have a different assay type, agar % or plate diameter, a warning is shown above the table.</li>
+  </ul>
+  <p>Metadata is stored with the experiment, included in backups and exported in the tidy CSV and Excel sheet (columns such as <code>strain</code>, <code>agar_pct</code>, <code>equivalent_diameter_mm</code>), ready for R or Python.</p>`,
   help_formats_title: "Image formats",
   help_formats_html: `<p>JPEG, PNG, WebP and the other formats of your browser are read directly. <b>TIFF</b> files are read by MotilityJ itself: 8 or 16 bits, grey, RGB or palette, in strips or tiles, uncompressed or compressed with LZW, PackBits, Deflate (ZIP) or JPEG. Not supported: BigTIFF, separate colour planes, floating-point samples and old-style JPEG; convert those to PNG first. Only the first page of a multi-page TIFF is used. iPhone HEIC photos taken from the app are converted to JPEG by the phone.</p>
   <p>Images are stored reduced to at most 2000 pixels on the longest side, which is enough for the analysis and keeps the browser storage small. The manual scale (pixels per mm) refers to the original image.</p>`,

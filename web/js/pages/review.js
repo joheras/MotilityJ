@@ -1,10 +1,14 @@
 // Image review: image with the plate circle and the growth contour; pinch-zoom and pan; class toggle;
-// contour editing (drag/insert/delete vertices, freehand redraw); plate adjustment; live area; undo.
+// contour editing (drag/insert/delete vertices, freehand redraw); plate adjustment; live area and shape
+// measurements; per-image metadata; undo.
 import { analyse } from "../analyze.js";
 import * as db from "../db.js";
 import { fmtNumber, h, s, setAttrs } from "../dom.js";
-import { areaMm2, distToSegment, mmPerPx, polygonArea, simplify } from "../geometry.js";
+import { distToSegment, mmPerPx, polygonArea, simplify } from "../geometry.js";
 import { t } from "../i18n.js";
+import { MEASURES, measure } from "../measure.js";
+import { measureSettings } from "../metadata.js";
+import { imageMetaFields } from "../metadata-ui.js";
 import { busy, confirmDialog, idle, showError, toast } from "../ui.js";
 
 const MODES = ["view", "vertices", "draw", "plate"];
@@ -285,6 +289,7 @@ export async function render(view, { expId, imageId }, ctx) {
   // ---------------------------------------------------------------- panel
   const classBtns = ["complete", "incomplete"].map((k) => h("button", { type: "button", class: `class-${k}`, onclick: () => setClass(k) }, t(k)));
   const areaEl = h("div", { class: "area-value" });
+  const measuresEl = h("dl", { class: "measures" });
   const scaleEl = h("div", { class: "muted small" });
   const statusEl = h("div", { class: "small" });
   const savedEl = h("span", { class: "muted small saved" });
@@ -309,13 +314,19 @@ export async function render(view, { expId, imageId }, ctx) {
     updatePanel();
   }
 
+  const DIGITS = { circularity: 3, coveragePct: 1 };
   function updateArea() {
-    const area = result ? areaMm2({ ...img, result }, ctx.settings) : null;
+    const st = measureSettings(img, exp, ctx.settings);
+    const m = result ? measure({ ...img, result }, st) : null;
+    const area = m?.areaMm2;
     areaEl.replaceChildren(area == null ? "—" : h("span", null, fmtNumber(area), h("small", null, " mm²")));
-    const k = result ? mmPerPx({ ...img, result }, ctx.settings) : null;
+    const k = result ? mmPerPx({ ...img, result }, st) : null;
     scaleEl.textContent = k == null ? t("noScale")
-      : ctx.settings.manualPxPerMm > 0 ? t("scaleManual", { k: fmtNumber(k, 4) })
-        : t("scalePlate", { k: fmtNumber(k, 4), d: ctx.settings.plateDiameterMm });
+      : st.manualPxPerMm > 0 ? t("scaleManual", { k: fmtNumber(k, 4) })
+        : t("scalePlate", { k: fmtNumber(k, 4), d: st.plateDiameterMm });
+    measuresEl.replaceChildren(...MEASURES.filter((key) => key !== "areaMm2").flatMap((key) => [
+      h("dt", null, t(`m_${key}`)),
+      h("dd", null, m?.[key] == null ? "—" : fmtNumber(m[key], DIGITS[key] ?? 2))]));
   }
   function updatePanel() {
     classBtns.forEach((b, i) => b.classList.toggle("active", result?.klass === ["complete", "incomplete"][i]));
@@ -354,12 +365,15 @@ export async function render(view, { expId, imageId }, ctx) {
     h("div", { class: "section-head" }, h("h2", { class: "file-title", title: img.name }, img.name), savedEl),
     statusEl,
     h("div", { class: "tabs class-tabs", role: "group", "aria-label": t("colClass") }, classBtns),
-    h("div", { class: "area-box" }, h("div", { class: "muted small" }, t("growthArea")), areaEl, scaleEl),
+    h("div", { class: "area-box" }, h("div", { class: "muted small" }, t("growthArea")), areaEl, scaleEl,
+      h("details", { class: "measures-box", open: true }, h("summary", { class: "small" }, t("measurements")), measuresEl)),
     h("h3", null, t("edit")),
     h("div", { class: "mode-grid", role: "group" }, modeBtns),
     modeHelp,
     h("div", { class: "btn-row" }, undoBtn, h("button", { onclick: reanalyse }, "⟳ ", result ? t("reanalyse") : t("analyse"))),
     h("label", null, t("colNotes"), notesEl),
+    h("details", { class: "meta-box", open: true }, h("summary", null, h("h3", null, t("imageMetadata"))),
+      imageMetaFields(img, exp, ctx.settings, (key, v) => { img.meta = { ...img.meta, [key]: v }; updateArea(); scheduleSave(); })),
     nav);
 
   const legend = h("div", { class: "legend" },

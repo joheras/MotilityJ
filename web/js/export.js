@@ -1,8 +1,9 @@
 // Results export (CSV, Excel) and backup/restore of experiments (.motilityj.json).
 import * as db from "./db.js";
-import { areaMm2 } from "./geometry.js";
+import { tableRows, tidyRows } from "./columns.js";
 import { t } from "./i18n.js";
-import { xlsxBlob } from "./xlsx.js";
+import { normalizeExperiment, normalizeImage } from "./metadata.js";
+import { xlsxWorkbookBlob } from "./xlsx.js";
 
 export const BACKUP_FORMAT = "motilityj-backup";
 export const BACKUP_EXT = ".motilityj.json";
@@ -20,14 +21,11 @@ export function download(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-export function resultRows(images, settings) {
-  const header = [t("colFile"), t("colClass"), t("colAreaPlain"), t("colNotes")];
-  const rows = images.map((img) => {
-    const area = areaMm2(img, settings);
-    return [img.name, img.result ? img.result.klass : "", area == null ? "" : Math.round(area * 100) / 100, img.notes || ""];
-  });
-  return [header, ...rows];
-}
+/** The results table as shown (visible columns). */
+export const resultRows = (images, exp, settings) => tableRows(images, exp, settings);
+
+/** Tidy table of one experiment: one row per image with all metadata and measurements. */
+export const tidyTable = (images, exp, settings) => tidyRows([{ exp, images }], settings);
 
 export function csvBlob(rows) {
   const cell = (v) => {
@@ -38,7 +36,15 @@ export function csvBlob(rows) {
   return new Blob(["﻿" + rows.map((r) => r.map(cell).join(",")).join("\r\n") + "\r\n"], { type: "text/csv;charset=utf-8" });
 }
 
-export const excelBlob = (rows, sheetName) => xlsxBlob(rows, { sheetName, widths: [36, 14, 14, 40] });
+/** Workbook with two sheets: the results as shown and the tidy data (all metadata and measurements). */
+export function excelBlob(images, exp, settings) {
+  const results = resultRows(images, exp, settings);
+  const tidy = tidyTable(images, exp, settings);
+  return xlsxWorkbookBlob([
+    { name: t("sheetResults"), rows: results, widths: [36, 14, ...results[0].slice(2).map(() => 16)] },
+    { name: t("sheetTidy"), rows: tidy, widths: tidy[0].map((h) => Math.max(12, Math.min(30, h.length + 2))) },
+  ]);
+}
 
 // ------------------------------------------------------------------ backup
 const blobToDataUrl = (blob) => new Promise((resolve, reject) => {
@@ -84,13 +90,13 @@ export async function restoreBackup(data) {
   let n = 0;
   for (const e of data.experiments) {
     const now = Date.now();
-    const exp = { id: db.newId(), name: e.name || t("untitled"), created: e.created || now, updated: now };
+    const exp = normalizeExperiment({ id: db.newId(), name: e.name || t("untitled"), created: e.created || now, updated: now, meta: e.meta });
     await db.putExperiment(exp);
     for (const im of e.images || []) {
-      await db.putImage({
+      await db.putImage(normalizeImage({
         ...im, id: db.newId(), experimentId: exp.id,
         blob: await dataUrlToBlob(im.blob), thumb: im.thumb ? await dataUrlToBlob(im.thumb) : null,
-      });
+      }));
     }
     n++;
   }
