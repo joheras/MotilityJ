@@ -3,7 +3,7 @@ import { h } from "../dom.js";
 import { t } from "../i18n.js";
 import { canInstall, isPersisted, isStandalone, promptInstall } from "../pwa.js";
 
-const SECTIONS = ["workflow", "review", "area", "formats", "install", "privacy"];
+const SECTIONS = ["workflow", "review", "deepmotility", "area", "formats", "install", "privacy"];
 
 export async function render(view, { section }) {
   const install = h("div");

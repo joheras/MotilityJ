@@ -2,7 +2,7 @@
 // fills in the list of app files and a version hash of their content: run it after changing any file.
 // It precaches the whole app so that it starts and analyses images offline. Each version has its own
 // cache; a new version waits until the page asks it to take over ("Reload" in the app).
-const VERSION = "0d1fac1836d9";
+const VERSION = "237ab52eb76e";
 const FILES = [
  "css/styles.css",
  "icons/apple-touch-icon.png",
@@ -20,6 +20,14 @@ const FILES = [
  "js/app.js",
  "js/config.js",
  "js/db.js",
+ "js/deepmotility/analyzer.js",
+ "js/deepmotility/eval.html",
+ "js/deepmotility/files.js",
+ "js/deepmotility/index.js",
+ "js/deepmotility/review-tool.js",
+ "js/deepmotility/settings-section.js",
+ "js/deepmotility/strings.js",
+ "js/deepmotility/worker.js",
  "js/dom.js",
  "js/drive-ui.js",
  "js/drive.js",

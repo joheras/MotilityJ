@@ -1,5 +1,6 @@
 // Runs the analysis module on stored images and normalises its result.
 import { analyzeImage } from "./analysis/index.js";
+import { analyzeWithDeepMotility } from "./deepmotility/analyzer.js";
 import * as db from "./db.js";
 import { polygonArea } from "./geometry.js";
 import { blobToImageData } from "./images.js";
@@ -10,7 +11,7 @@ const nextFrame = () => new Promise((r) => requestAnimationFrame(() => setTimeou
 
 export async function analyse(image, onProgress) {
   const data = await blobToImageData(image.blob);
-  const r = await analyzeImage(data, { onProgress });
+  const r = (await analyzeWithDeepMotility(data, onProgress)) ?? (await analyzeImage(data, { onProgress }));
   const contour = Array.isArray(r.contour) ? r.contour.map(([x, y]) => [x, y]) : [];
   return {
     klass: r.klass === "complete" ? "complete" : "incomplete",

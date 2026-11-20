@@ -3,6 +3,7 @@ import * as db from "../db.js";
 import { h } from "../dom.js";
 import { t } from "../i18n.js";
 import { isPersisted, requestPersistence } from "../pwa.js";
+import { analyzerSection } from "../deepmotility/settings-section.js";
 import { confirmDialog, showError, toast } from "../ui.js";
 
 export async function render(view, _params, ctx) {
@@ -15,7 +16,7 @@ export async function render(view, _params, ctx) {
     const d = Number(diameter.value), m = manual.value.trim() === "" ? null : Number(manual.value);
     if (!(d > 0)) return toast(t("invalidDiameter"), "error");
     if (m != null && !(m > 0)) return toast(t("invalidScale"), "error");
-    ctx.settings = { ...st, plateDiameterMm: d, manualPxPerMm: m };
+    ctx.settings = { ...ctx.settings, plateDiameterMm: d, manualPxPerMm: m }; // ctx: the analyzer card may have changed it
     try { await db.saveSettings(ctx.settings); toast(t("settingsSaved"), "ok"); } catch (err) { showError(err); }
   } },
   h("h2", null, t("measurement")),
@@ -47,5 +48,5 @@ export async function render(view, _params, ctx) {
         }
       } }, t("deleteAll"))));
 
-  view.replaceChildren(h("div", { class: "page-head" }, h("h1", null, t("settings"))), h("div", { class: "settings-page" }, form, storage));
+  view.replaceChildren(h("div", { class: "page-head" }, h("h1", null, t("settings"))), h("div", { class: "settings-page" }, form, await analyzerSection(ctx), storage));
 }
