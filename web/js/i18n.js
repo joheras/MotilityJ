@@ -30,7 +30,7 @@ const en = {
 
   // experiment page
   addImages: "Add images", dropHere: "Drop images here or click to choose",
-  dropFormats: "JPEG, PNG, WebP or TIFF (uncompressed, LZW or PackBits). Large images are reduced to 2000 pixels.",
+  dropFormats: "JPEG, PNG, WebP or TIFF. Large images are reduced to 2000 pixels.",
   takePhoto: "Take photo", chooseFiles: "Choose files",
   importingN: "Importing image {i} of {n}…", imagesAdded: "{n} image(s) added.",
   skippedFiles: "{n} file(s) skipped: not images.", unsupportedFile: "{name}: this image format cannot be read in this browser.",
@@ -115,7 +115,7 @@ const en = {
     <li><b>Incomplete</b>: area = area of the outline in pixels × (mm per pixel)². It is recomputed as soon as you edit the outline or the plate circle.</li>
   </ul>`,
   help_formats_title: "Image formats",
-  help_formats_html: `<p>JPEG, PNG, WebP and the other formats of your browser are read directly. Baseline <b>TIFF</b> files (8 or 16 bits, grey, RGB or palette; uncompressed, LZW or PackBits) are read by MotilityJ itself; tiled, JPEG- or Deflate-compressed TIFFs are not: convert them to PNG first. iPhone HEIC photos taken from the app are converted to JPEG by the phone.</p>
+  help_formats_html: `<p>JPEG, PNG, WebP and the other formats of your browser are read directly. <b>TIFF</b> files are read by MotilityJ itself: 8 or 16 bits, grey, RGB or palette, in strips or tiles, uncompressed or compressed with LZW, PackBits, Deflate (ZIP) or JPEG. Not supported: BigTIFF, separate colour planes, floating-point samples and old-style JPEG; convert those to PNG first. Only the first page of a multi-page TIFF is used. iPhone HEIC photos taken from the app are converted to JPEG by the phone.</p>
   <p>Images are stored reduced to at most 2000 pixels on the longest side, which is enough for the analysis and keeps the browser storage small. The manual scale (pixels per mm) refers to the original image.</p>`,
   help_install_title: "Phones, tablets and offline use",
   help_install_html: `<p>MotilityJ works on phones and tablets: <b>Take photo</b> opens the rear camera. You can also <b>install</b> it as an app: it then opens from the home screen in its own window and works without an internet connection.</p>

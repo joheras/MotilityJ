@@ -18,7 +18,7 @@ const toBlob = (canvas, type, quality) => new Promise((resolve, reject) =>
 async function decode(file) {
   const head = new Uint8Array(await file.slice(0, 4).arrayBuffer());
   if (isTiffBytes(head)) {
-    const data = decodeTiff(await file.arrayBuffer());
+    const data = await decodeTiff(await file.arrayBuffer());
     const c = canvasOf(data.width, data.height);
     c.getContext("2d").putImageData(data, 0, 0);
     return { source: c, width: c.width, height: c.height, tiff: true };
