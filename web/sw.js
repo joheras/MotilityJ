@@ -2,7 +2,7 @@
 // fills in the list of app files and a version hash of their content: run it after changing any file.
 // It precaches the whole app so that it starts and analyses images offline. Each version has its own
 // cache; a new version waits until the page asks it to take over ("Reload" in the app).
-const VERSION = "0d1fac1836d9";
+const VERSION = "22fa9a94b8b7";
 const FILES = [
  "css/styles.css",
  "icons/apple-touch-icon.png",
@@ -34,6 +34,10 @@ const FILES = [
  "js/pages/review.js",
  "js/pages/settings.js",
  "js/pwa.js",
+ "js/sam/eval.html",
+ "js/sam/files.js",
+ "js/sam/index.js",
+ "js/sam/worker.js",
  "js/tiff.js",
  "js/ui.js",
  "js/xlsx.js",

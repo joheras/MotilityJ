@@ -56,6 +56,9 @@ The method was chosen by measurement. Classical alternatives were prototyped fir
 
 They reached only mIoU 0.63 on the test set (about 0.78 on train after tuning). They break when growth covers most of the plate, because the "background" annulus is then itself growth, and when the colony interior has the same grey level as the agar. Swapping the MLP for logistic regression on the same features gives 0.70; gradient-boosted trees give 0.84. A larger MLP (64, 32) and a second-pass refinement for tiny colonies gave no gain.
 
+Interactive refinement with Segment Anything (box / point prompts on the review page) is a separate, optional
+module; its method and its comparison with this analyzer are in [`../sam/README.md`](../sam/README.md).
+
 ## Measured accuracy (JS port, `eval.html` in Chromium)
 
 Segmentation is scored on the **test split** (313 labelled images, all incomplete). IoU is computed at full label resolution, with the predicted polygon rasterised by the canvas.

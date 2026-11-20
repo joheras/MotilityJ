@@ -9,12 +9,12 @@ export function busy(label, fraction = null, onCancel = null) {
     busyEl = h("div", { class: "busy", role: "status", "aria-live": "polite" });
     document.body.append(busyEl);
   }
-  busyEl.replaceChildren(
+  busyEl.replaceChildren(...[
     h("div", { class: "spinner" }),
     h("div", { class: "busy-label" }, label),
     fraction == null ? null : h("div", { class: "progress" }, h("span", { style: { width: `${Math.round(fraction * 100)}%` } })),
     onCancel ? h("button", { class: "small", onclick: onCancel }, t("cancel")) : null,
-  );
+  ].filter(Boolean)); // replaceChildren() would print null as text
 }
 export function idle() { busyEl?.remove(); busyEl = null; }
 

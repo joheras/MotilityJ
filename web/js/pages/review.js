@@ -1,5 +1,6 @@
 // Image review: image with the plate circle and the growth contour; pinch-zoom and pan; class toggle;
-// contour editing (drag/insert/delete vertices, freehand redraw); plate adjustment; live area; undo.
+// contour editing (drag/insert/delete vertices, freehand redraw, Segment Anything prompts); plate adjustment;
+// live area; undo.
 import { analyse } from "../analyze.js";
 import * as db from "../db.js";
 import { fmtNumber, h, s, setAttrs } from "../dom.js";
@@ -7,8 +8,9 @@ import { areaMm2, distToSegment, mmPerPx, polygonArea, simplify } from "../geome
 import { t } from "../i18n.js";
 import { busy, confirmDialog, idle, showError, toast } from "../ui.js";
 
-const MODES = ["view", "vertices", "draw", "plate"];
-const MODE_ICONS = { view: "✋", vertices: "◆", draw: "✎", plate: "◯" };
+const MODES = ["view", "vertices", "draw", "plate", "sam"];
+const MODE_ICONS = { view: "✋", vertices: "◆", draw: "✎", plate: "◯", sam: "✦" };
+const sam = () => import("../sam/index.js"); // loaded only when the SAM tool is opened
 const clone = (x) => (x == null ? x : JSON.parse(JSON.stringify(x)));
 
 export async function render(view, { expId, imageId }, ctx) {
@@ -26,6 +28,9 @@ export async function render(view, { expId, imageId }, ctx) {
   const undoStack = [];
   let vb = { x: 0, y: 0, w: W, h: H };
   let draft = null; // freehand points while drawing
+  // Segment Anything: prompts of the current outline ({box, points: [[x, y, positive]]}), state of the
+  // model for this image (null | "loading" | "ready"), the box being dragged, include/exclude for taps.
+  let samPrompts = { box: null, points: [] }, samState = null, samDrag = null, samExclude = false, samSeq = 0;
 
   // ------------------------------------------------------------------ svg
   const imageEl = s("image", { href: url, x: 0, y: 0, width: W, height: H, preserveAspectRatio: "none" });
@@ -34,8 +39,9 @@ export async function render(view, { expId, imageId }, ctx) {
   const contourEl = s("polygon", { class: "contour", "vector-effect": "non-scaling-stroke" });
   const draftEl = s("polyline", { class: "draft", "vector-effect": "non-scaling-stroke" });
   const handles = s("g", { class: "handles" });
+  const samLayer = s("g", { class: "sam-prompts" });
   const svg = s("svg", { viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: "xMidYMid meet", style: `aspect-ratio: ${W} / ${H}`, role: "img", "aria-label": img.name },
-    imageEl, plateFill, contourEl, plateEl, draftEl, handles);
+    imageEl, plateFill, contourEl, plateEl, draftEl, handles, samLayer);
 
   const zoomIn = h("button", { title: t("zoomIn"), "aria-label": t("zoomIn"), onclick: () => zoomAt(1.6, [vb.x + vb.w / 2, vb.y + vb.h / 2]) }, "+");
   const zoomOut = h("button", { title: t("zoomOut"), "aria-label": t("zoomOut"), onclick: () => zoomAt(1 / 1.6, [vb.x + vb.w / 2, vb.y + vb.h / 2]) }, "−");
@@ -73,7 +79,18 @@ export async function render(view, { expId, imageId }, ctx) {
     setAttrs(contourEl, { points: pts.map((q) => q.join(",")).join(" "), display: pts.length ? null : "none", class: result?.klass === "complete" ? "contour dim" : "contour" });
     setAttrs(draftEl, { points: draft ? draft.map((q) => q.join(",")).join(" ") : "", display: draft ? null : "none" });
     handles.replaceChildren();
+    samLayer.replaceChildren();
     const r = 5 * u;
+    if (mode === "sam") {
+      const b = samDrag || samPrompts.box;
+      if (b) {
+        samLayer.append(s("rect", { x: Math.min(b[0], b[2]), y: Math.min(b[1], b[3]), width: Math.abs(b[2] - b[0]), height: Math.abs(b[3] - b[1]),
+          class: "sam-box", "vector-effect": "non-scaling-stroke" }));
+      }
+      for (const [x, y, pos] of samPrompts.points) {
+        samLayer.append(s("circle", { cx: x, cy: y, r: r * 1.3, class: pos ? "sam-point" : "sam-point neg", "stroke-width": 1.5 * u }));
+      }
+    }
     if (mode === "vertices") {
       for (const [x, y] of pts) handles.append(s("circle", { cx: x, cy: y, r, class: "handle", "stroke-width": 1.5 * u }));
     } else if (mode === "plate" && p) {
@@ -94,8 +111,8 @@ export async function render(view, { expId, imageId }, ctx) {
     return result;
   }
   const snapshot = () => clone(result);
-  function pushUndo(snap) {
-    undoStack.push(snap);
+  function pushUndo(snap, prompts = samPrompts) {
+    undoStack.push({ result: snap, prompts: clone(prompts) });
     if (undoStack.length > 50) undoStack.shift();
   }
   function changed({ contour = false } = {}) {
@@ -107,7 +124,8 @@ export async function render(view, { expId, imageId }, ctx) {
   }
   function undo() {
     if (!undoStack.length) return;
-    result = undoStack.pop();
+    ({ result, prompts: samPrompts } = undoStack.pop());
+    samSeq++; // a SAM answer still on its way belongs to the undone state
     drawOverlay();
     updatePanel();
     scheduleSave();
@@ -161,6 +179,10 @@ export async function render(view, { expId, imageId }, ctx) {
       drawOverlay();
       return { kind: "draw", ...start };
     }
+    if (mode === "sam") {
+      if (samState !== "ready") return { kind: "pan", ...start };
+      return { kind: "sam", from: p, exclude: samExclude || e.altKey || e.shiftKey, ...start };
+    }
     if (mode === "plate") {
       const pl = ensureResult().plate;
       const d = Math.hypot(p[0] - pl.cx, p[1] - pl.cy);
@@ -183,6 +205,13 @@ export async function render(view, { expId, imageId }, ctx) {
       g.moved = true;
       drawOverlay();
       updateArea();
+    } else if (g.kind === "sam") {
+      // A drag longer than a tap's jitter becomes a box.
+      if (samDrag || Math.hypot(e.clientX - g.client[0], e.clientY - g.client[1]) > 8) {
+        const c = (v, m) => Math.min(Math.max(v, 0), m);
+        samDrag = [g.from[0], g.from[1], c(p[0], W), c(p[1], H)];
+        drawOverlay();
+      }
     } else if (g.kind === "draw") {
       const last = draft[draft.length - 1];
       if (Math.hypot(p[0] - last[0], p[1] - last[1]) >= 2 * g.u) { draft.push(p); drawOverlay(); }
@@ -205,6 +234,21 @@ export async function render(view, { expId, imageId }, ctx) {
     const g = gesture;
     gesture = null;
     if (!g) return;
+    if (g.kind === "sam") {
+      const box = samDrag;
+      samDrag = null;
+      const prev = samPrompts;
+      if (!commit) { drawOverlay(); return; }
+      if (box) {
+        if (Math.abs(box[2] - box[0]) < 3 * g.u || Math.abs(box[3] - box[1]) < 3 * g.u) { drawOverlay(); return; }
+        samPrompts = { box, points: [] }; // a new box starts a new selection
+      } else {
+        samPrompts = { box: prev.box, points: [...prev.points, [...g.from, !g.exclude]] };
+      }
+      drawOverlay();
+      runSam(prev);
+      return;
+    }
     if (g.kind === "draw") {
       const pts = draft;
       draft = null;
@@ -291,6 +335,14 @@ export async function render(view, { expId, imageId }, ctx) {
   const modeBtns = MODES.map((m) => h("button", { type: "button", "data-mode": m, onclick: () => setMode(m), title: t(`mode_${m}_help`) }, MODE_ICONS[m], " ", t(`mode_${m}`)));
   const modeHelp = h("p", { class: "help" });
   const undoBtn = h("button", { onclick: undo }, "↶ ", t("undo"));
+  const samSignBtns = [false, true].map((ex) => h("button", { type: "button", onclick: () => { samExclude = ex; updatePanel(); } },
+    ex ? "− " : "+ ", t(ex ? "samExclude" : "samInclude")));
+  const samClearBtn = h("button", { type: "button", onclick: () => { samPrompts = { box: null, points: [] }; samSeq++; drawOverlay(); updatePanel(); } }, t("samClear"));
+  const samInfo = h("p", { class: "muted small" });
+  const samPanel = h("div", { class: "sam-panel", hidden: true },
+    h("div", { class: "tabs", role: "group", "aria-label": t("samPointKind") }, samSignBtns),
+    h("div", { class: "btn-row" }, samClearBtn),
+    samInfo);
   const notesEl = h("textarea", { rows: 2, placeholder: t("notesPlaceholder"), oninput: () => scheduleSave() });
   notesEl.value = img.notes || "";
 
@@ -307,6 +359,49 @@ export async function render(view, { expId, imageId }, ctx) {
     editor.dataset.mode = m;
     drawOverlay();
     updatePanel();
+    if (m === "sam") startSam();
+  }
+
+  // ------------------------------------------------------ segment anything
+  async function startSam() {
+    if (samState) return;
+    samState = "loading";
+    try {
+      const S = await sam();
+      if (!S.samSupported()) throw new Error(t("samUnsupported"));
+      const info = await S.modelInfo();
+      if (!info.cached && !(await confirmDialog(t("samDownloadConfirm", { mb: fmtNumber(info.bytes / 1e6, 0) }), { ok: t("samDownload"), title: t("mode_sam") }))) {
+        throw null;
+      }
+      const label = info.cached ? t("samLoading") : t("samDownloading", { mb: fmtNumber(info.bytes / 1e6, 0) });
+      busy(label, info.cached ? null : 0);
+      await S.loadModel((f) => busy(label, info.cached ? null : f));
+      busy(t("samPreparing"));
+      const { ms, backend } = await S.prepare(img.id, img.blob);
+      samState = "ready";
+      samInfo.textContent = t("samReady", { backend: backend === "webgpu" ? "WebGPU" : "WebAssembly", s: fmtNumber(ms / 1000, 1) });
+    } catch (e) {
+      samState = null;
+      if (e) showError(e);
+      if (mode === "sam") setMode("view");
+    } finally { idle(); updatePanel(); }
+  }
+
+  async function runSam(prev) {
+    const seq = ++samSeq;
+    const prompts = samPrompts;
+    if (!prompts.box && !prompts.points.length) return;
+    try {
+      const r = await (await sam()).segment(img.id, prompts);
+      if (seq !== samSeq) return;
+      if (r.contour.length < 3) { toast(t("samEmpty")); return; }
+      ensureResult();
+      pushUndo(snapshot(), prev);
+      result.contour = r.contour;
+      result.klass = "incomplete";
+      changed({ contour: true });
+      samInfo.textContent = t("samDecoded", { ms: Math.round(r.ms), score: Math.round(r.score * 100) });
+    } catch (e) { showError(e); }
   }
 
   function updateArea() {
@@ -322,6 +417,9 @@ export async function render(view, { expId, imageId }, ctx) {
     modeBtns.forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
     modeHelp.textContent = t(`mode_${mode}_help`);
     undoBtn.disabled = !undoStack.length;
+    samPanel.hidden = mode !== "sam" || samState !== "ready";
+    samSignBtns.forEach((b, i) => b.classList.toggle("active", samExclude === (i === 1)));
+    samClearBtn.disabled = !samPrompts.box && !samPrompts.points.length;
     statusEl.replaceChildren(!result ? h("span", { class: "badge cat-na" }, t("notAnalysed"))
       : result.edited ? h("span", { class: "auto review" }, t("editedByHand"))
         : h("span", { class: "auto" }, t("automatic"), result.confidence != null ? ` · ${t("confidence")} ${Math.round(result.confidence * 100)}%` : ""));
@@ -358,6 +456,7 @@ export async function render(view, { expId, imageId }, ctx) {
     h("h3", null, t("edit")),
     h("div", { class: "mode-grid", role: "group" }, modeBtns),
     modeHelp,
+    samPanel,
     h("div", { class: "btn-row" }, undoBtn, h("button", { onclick: reanalyse }, "⟳ ", result ? t("reanalyse") : t("analyse"))),
     h("label", null, t("colNotes"), notesEl),
     nav);
@@ -374,6 +473,7 @@ export async function render(view, { expId, imageId }, ctx) {
   const onKey = (e) => {
     if (e.target.closest?.("input, textarea, select")) return;
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); undo(); }
+    else if (e.key === "Escape" && mode === "sam") samClearBtn.click();
     else if (e.key === "ArrowLeft" && e.altKey) go(idx - 1);
     else if (e.key === "ArrowRight" && e.altKey) go(idx + 1);
   };

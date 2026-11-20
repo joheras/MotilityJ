@@ -62,6 +62,18 @@ const en = {
   mode_vertices_help: "Drag a vertex to move it; drag the outline between two vertices to add one; double-click a vertex to delete it.",
   mode_draw_help: "Draw the outline of the growth with one finger or the mouse; it replaces the current outline when you lift it.",
   mode_plate_help: "Drag the edge of the plate circle to resize it, or its inside to move it. Its diameter sets the scale.",
+  mode_sam: "AI outline (Segment Anything)",
+  mode_sam_help: "Drag a box around the growth, or tap on it. Tap again to add points: Include (+) adds a region, Exclude (−, or Alt/Shift+click) removes one. Each prompt replaces the outline; Undo goes back.",
+  samInclude: "Include", samExclude: "Exclude", samPointKind: "Kind of point", samClear: "Clear prompts",
+  samDownload: "Download",
+  samDownloadConfirm: "The AI outline tool uses the Segment Anything model (SlimSAM), which is downloaded once (about {mb} MB) and then kept in this browser for offline use. Download it now?",
+  samDownloading: "Downloading the Segment Anything model ({mb} MB)…",
+  samLoading: "Loading the Segment Anything model…",
+  samPreparing: "Preparing the image for Segment Anything (once per image; up to half a minute on a phone)…",
+  samReady: "Ready ({backend}; image prepared in {s} s). Drag a box or tap the growth.",
+  samDecoded: "Outline updated in {ms} ms (model confidence {score}%).",
+  samEmpty: "Segment Anything found nothing there: try a box or another point.",
+  samUnsupported: "This browser cannot run the AI outline tool (needs Web Workers, WebAssembly and the Cache API).",
 
   // settings
   measurement: "Measurement", plateDiameter: "Plate diameter (mm)",
@@ -105,9 +117,18 @@ const en = {
     <li><b>Class</b>: switch between complete and incomplete. A complete plate counts the whole plate area.</li>
     <li><b>Vertices</b>: drag the points of the outline; drag the line between two points to add one; double-click a point to delete it.</li>
     <li><b>Redraw</b>: draw the outline again by hand in one stroke.</li>
+    <li><b>AI outline</b>: drag a box around the growth or tap on it and Segment Anything outlines it (see <a href="#/help/sam">AI outline</a>).</li>
     <li><b>Plate</b>: move the circle or drag its edge to fit the inner rim of the dish; the scale follows it.</li>
     <li><b>Undo</b> (<kbd>Ctrl</kbd>+<kbd>Z</kbd>) reverts the last change; <b>Re-analyse</b> runs the automatic analysis again. <kbd>Alt</kbd>+<kbd>←</kbd>/<kbd>→</kbd> go to the previous/next image.</li>
   </ul>`,
+  help_sam_title: "AI outline (Segment Anything)",
+  help_sam_html: `<p>The automatic analysis outlines every image. When its outline is wrong, for example on very small colonies, the <b>✦ AI outline</b> tool of the review page lets you point at the growth and the <b>Segment Anything</b> model (SlimSAM, a small version of Meta's SAM) draws its outline for you.</p>
+  <ul>
+    <li><b>Drag a box</b> around the growth (mouse or one finger): this is the most reliable prompt.</li>
+    <li><b>Tap</b> or click to add points: <b>Include</b> adds a region, <b>Exclude</b> removes one (<kbd>Alt</kbd>/<kbd>Shift</kbd>+click also excludes). A single point is often ambiguous; a box plus a few points works best.</li>
+    <li>Each prompt replaces the outline, which you can still adjust with <b>Vertices</b>. <b>Undo</b> goes back one step; <b>Clear prompts</b> (<kbd>Esc</kbd>) starts a new selection.</li>
+  </ul>
+  <p>The model is downloaded the first time you open the tool (about 25 MB, or 39 MB in browsers with WebGPU) and then kept in this browser, so it also works offline. It runs on your device: the image is not sent anywhere. Preparing each image takes about 1 s with WebGPU or 5–10 s without it on a computer (longer on phones); after that every prompt takes a fraction of a second.</p>`,
   help_area_title: "How the area is computed",
   help_area_html: `<p>The scale comes from the plate: <code>mm per pixel = plate diameter / (2 × plate radius in pixels)</code>, with the plate diameter of <a href="#/settings">Settings</a> (90 mm by default). If all your photos are taken from the same distance you can set a fixed scale in pixels per mm instead.</p>
   <ul>
@@ -131,6 +152,7 @@ const en = {
     <li><b>Back up</b> saves an experiment (or all of them) with its images to a <code>.motilityj.json</code> file. Do it regularly.</li>
     <li><b>Restore</b> adds the experiments of a backup file; use it to move your data to another device or browser.</li>
     <li>Clearing the browsing data or site data, using a private window, or uninstalling the browser deletes the data. Some browsers may also evict storage when the disk is almost full; see <a href="#/settings">Settings</a> to ask the browser to keep it.</li>
+    <li>The optional <b>AI outline</b> tool downloads its model files once from public servers (cdn.jsdelivr.net and huggingface.co); like any download, those servers see your IP address, but no image or result is sent.</li>
   </ul>`,
 };
 
