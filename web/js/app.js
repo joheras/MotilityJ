@@ -9,12 +9,14 @@ import * as experimentPage from "./pages/experiment.js";
 import * as experimentsPage from "./pages/experiments.js";
 import * as helpPage from "./pages/help.js";
 import * as reviewPage from "./pages/review.js";
+import * as seriesPage from "./pages/series.js";
 import * as settingsPage from "./pages/settings.js";
 
 const ROUTES = [
   [/^\/?$/, experimentsPage, () => ({})],
   [/^\/e\/([^/]+)\/?$/, experimentPage, (m) => ({ expId: m[1] })],
   [/^\/e\/([^/]+)\/i\/([^/]+)\/?$/, reviewPage, (m) => ({ expId: m[1], imageId: m[2] })],
+  [/^\/e\/([^/]+)\/s\/([^/]+)\/?$/, seriesPage, (m) => ({ expId: m[1], seriesId: m[2] })],
   [/^\/settings\/?$/, settingsPage, () => ({})],
   [/^\/help(?:\/([\w-]+))?\/?$/, helpPage, (m) => ({ section: m[1] })],
 ];

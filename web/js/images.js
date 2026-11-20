@@ -1,5 +1,6 @@
 // Image import: decode (JPEG, PNG, WebP, … natively; TIFF with js/tiff.js), downscale to MAX_SIDE,
 // thumbnail; and decoding stored images back to ImageData for the analysis.
+import { readCaptureTime } from "./exif.js";
 import { decodeTiff, isTiffBytes } from "./tiff.js";
 
 export const MAX_SIDE = 2000;
@@ -50,7 +51,9 @@ export async function importFile(file) {
   const ts = Math.min(1, THUMB_SIDE / Math.max(w, h));
   const thumb = await toBlob(draw(source, Math.max(1, Math.round(width * ts * scale)), Math.max(1, Math.round(height * ts * scale))), "image/jpeg", 0.8);
   source.close?.();
-  return { blob, thumb, width: w, height: h, origWidth: width, origHeight: height, scale: w / width };
+  // Capture time for time series: EXIF of the original file, else its last-modified time.
+  const capturedAt = (await readCaptureTime(file)) ?? (file.lastModified || null);
+  return { blob, thumb, width: w, height: h, origWidth: width, origHeight: height, scale: w / width, capturedAt };
 }
 
 export async function blobToImageData(blob) {

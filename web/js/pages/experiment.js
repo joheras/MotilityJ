@@ -8,6 +8,7 @@ import { areaMm2 } from "../geometry.js";
 import { t } from "../i18n.js";
 import { ACCEPT, importFile, isImageFile } from "../images.js";
 import { requestPersistence } from "../pwa.js";
+import { seriesCard } from "../series-ui.js";
 import { busy, confirmDialog, fileButton, idle, showError, toast } from "../ui.js";
 import { deleteExperimentAsk, renameExperiment } from "./experiments.js";
 
@@ -140,6 +141,7 @@ export async function render(view, { expId }, ctx) {
       images.length ? h("p", { class: "muted small" }, t("areaNote", { d: settings.plateDiameterMm }),
         settings.manualPxPerMm > 0 ? ` ${t("manualScaleActive", { s: settings.manualPxPerMm })}` : "", " ", h("a", { href: "#/settings" }, t("settings"))) : null);
 
+    const series = await seriesCard(exp, images, settings, draw, urls);
     const gallery = images.length ? h("section", { class: "card" }, h("h2", null, t("images")), h("div", { class: "plates" }, thumbs)) : null;
 
     // Phones: main actions in a bar at the bottom of the screen.
@@ -148,7 +150,7 @@ export async function render(view, { expId }, ctx) {
 
     view.replaceChildren(
       h("div", { class: "crumbs" }, h("a", { href: "#/" }, t("experiments")), " › ", exp.name),
-      head, addCard, results, gallery, bottom);
+      head, addCard, results, series, gallery, bottom);
   }
 
   async function backup() {
