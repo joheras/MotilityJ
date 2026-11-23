@@ -37,6 +37,15 @@ oculta los botones y no se carga ningún script de Google.
 * Capturas del móvil: la foto se reduce a JPEG de 3000 px como máximo; el JSON (sidecar) con los datos de la
   placa y una miniatura se sube al final y marca la captura como completa. Las subidas esperan en una base de
   datos IndexedDB propia (`motilityj-drive-queue`) y se reintentan al recuperar la conexión o al reconectar.
+* Flujo en la aplicación: **Captura** (`#/capture`, pensada para el móvil) comprueba la calidad de cada foto y la
+  envía con `uploadCapture`; **Bandeja** (`#/inbox`, en el ordenador) lista `Inbox/`, importa y analiza las fotos
+  elegidas en un experimento y las mueve a `Inbox/Processed/` con `markProcessed`. Campos del sidecar escritos por
+  Captura (además de los de `drive.js`): `client_id`, `app`, `strain`, `condition`, `bioRep`, `techRep`,
+  `incubationTimeH`, `notes`, `original_name`, `experiment` (`{id, name}` o `null`), `captured_at` (ISO) y
+  `quality` (informe de `js/quality.js`: `score`, `level`, `items` [`{level, code, params}`], `metrics`, `plate`).
+  Al importar, esos datos pasan a `image.meta`, `image.notes`, `image.capturedAt` e `image.quality`.
+* Prueba sin cuenta de Google: `web/tools/capture-mock.html` abre la aplicación entera con un Drive y un inicio
+  de sesión falsos en memoria (`web/tools/drive-fake.js`, compartidos con `web/js/drive.mock-test.html`).
 
 ### Configuración de Google Cloud (responsable del despliegue)
 
@@ -128,6 +137,15 @@ Google script is loaded.
 * Phone captures: the photo is downscaled to a JPEG of at most 3000 px; the JSON sidecar (plate data and a small
   thumbnail) is uploaded last and marks the capture complete. Uploads wait in their own IndexedDB database
   (`motilityj-drive-queue`) and are retried when the connection comes back or after reconnecting.
+* In the app: **Capture** (`#/capture`, made for phones) checks the quality of each photo and sends it with
+  `uploadCapture`; **Inbox** (`#/inbox`, on the computer) lists `Inbox/`, imports and analyses the chosen photos
+  into an experiment and moves them to `Inbox/Processed/` with `markProcessed`. Sidecar fields written by Capture
+  (besides those of `drive.js`): `client_id`, `app`, `strain`, `condition`, `bioRep`, `techRep`, `incubationTimeH`,
+  `notes`, `original_name`, `experiment` (`{id, name}` or `null`), `captured_at` (ISO) and `quality` (report of
+  `js/quality.js`: `score`, `level`, `items` [`{level, code, params}`], `metrics`, `plate`). On import they go to
+  `image.meta`, `image.notes`, `image.capturedAt` and `image.quality`.
+* Testing without a Google account: `web/tools/capture-mock.html` opens the whole app with an in-memory fake Drive
+  and fake sign-in (`web/tools/drive-fake.js`, shared with `web/js/drive.mock-test.html`).
 
 ### Google Cloud setup (owner of the deployment)
 

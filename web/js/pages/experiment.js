@@ -3,7 +3,7 @@
 import { analyseImages } from "../analyze.js";
 import * as db from "../db.js";
 import { fmtNumber, h } from "../dom.js";
-import { driveEnabled, importFromInbox, saveExperimentToDrive } from "../drive-ui.js";
+import { driveEnabled, saveExperimentToDrive } from "../drive-ui.js";
 import { rowContext, visibleColumns } from "../columns.js";
 import { BACKUP_EXT, backupBlob, csvBlob, download, excelBlob, safeFileName, tidyTable } from "../export.js";
 import { t } from "../i18n.js";
@@ -11,6 +11,8 @@ import { ACCEPT, importFile, isImageFile } from "../images.js";
 import { fieldDef, isEmpty } from "../metadata.js";
 import { assayCard, bulkEditDialog, columnsDialog, conflictWarning, formatMeta, metaInput } from "../metadata-ui.js";
 import { requestPersistence } from "../pwa.js";
+import { checkPhoto } from "../quality.js";
+import { qualityBadge, storedQuality } from "../quality-ui.js";
 import { seriesCard } from "../series-ui.js";
 import { needsReview, overlayThumb } from "../thumbs.js";
 import { busy, confirmDialog, fileButton, idle, menu, showError, toast } from "../ui.js";
@@ -40,13 +42,17 @@ export async function render(view, { expId }, ctx) {
     const list = files.filter(isImageFile);
     const skipped = files.length - list.length;
     const errors = [];
+    let warned = 0;
     requestPersistence();
     try {
       for (let i = 0; i < list.length; i++) {
         busy(t("importingN", { i: i + 1, n: list.length }), i / list.length);
         try {
           const fields = await importFile(list[i]);
-          await db.putImage({ id: db.newId(), experimentId: exp.id, name: list[i].name || `photo-${Date.now()}.jpg`, added: Date.now() + i, notes: "", meta: {}, result: null, ...fields });
+          // Photo quality check on the stored copy (non-blocking: the image is added anyway).
+          const quality = storedQuality(await checkPhoto(fields.blob, { origWidth: fields.origWidth }).catch(() => null), fields.width);
+          if (quality?.items.length) warned++;
+          await db.putImage({ id: db.newId(), experimentId: exp.id, name: list[i].name || `photo-${Date.now()}.jpg`, added: Date.now() + i, notes: "", meta: {}, result: null, ...fields, quality });
         } catch (e) {
           errors.push(e.message === "unsupported" ? t("unsupportedFile", { name: list[i].name }) : `${list[i].name}: ${e.message}`);
         }
@@ -55,6 +61,7 @@ export async function render(view, { expId }, ctx) {
     await db.touchExperiment(exp.id);
     const added = list.length - errors.length;
     if (added) toast(t("imagesAdded", { n: added }), "ok");
+    if (warned) toast(t("qualityImported", { n: warned }));
     if (skipped) toast(t("skippedFiles", { n: skipped }), "error");
     errors.forEach((e) => toast(e, "error"));
     await draw();
@@ -160,7 +167,7 @@ export async function render(view, { expId }, ctx) {
       h("h2", null, t("addImages")),
       dropzone,
       h("div", { class: "photo-buttons" }, camera(), chooser(),
-        driveEnabled() ? h("button", { onclick: async () => { if (await importFromInbox(exp.id)) await draw(); } }, t("driveInbox")) : null));
+        driveEnabled() ? h("a", { class: "button", href: `#/inbox/${exp.id}` }, "☁ ", t("driveInbox")) : null));
 
     const thumbs = images.map((img) => {
       const url = URL.createObjectURL(img.thumb || img.blob);
@@ -168,7 +175,7 @@ export async function render(view, { expId }, ctx) {
       return h("a", { class: "plate-thumb", href: `#/e/${exp.id}/i/${img.id}`, title: img.name },
         overlayThumb(img, url),
         h("span", { class: "thumb-name" }, img.name),
-        h("span", { class: "thumb-badges" }, classBadge(img.result), reviewBadge(img.result)));
+        h("span", { class: "thumb-badges" }, classBadge(img.result), reviewBadge(img.result), qualityBadge(img.quality)));
     });
 
     const cols = visibleColumns(settings);
@@ -204,7 +211,7 @@ export async function render(view, { expId }, ctx) {
       return h("tr", { class: selected.has(img.id) ? "selected" : null },
         h("td", { class: "sel-cell" }, box),
         h("td", { class: "file-cell" }, h("a", { href: `#/e/${exp.id}/i/${img.id}` }, img.name)),
-        h("td", null, h("span", { class: "thumb-badges" }, classBadge(img.result), reviewBadge(img.result))),
+        h("td", null, h("span", { class: "thumb-badges" }, classBadge(img.result), reviewBadge(img.result), qualityBadge(img.quality))),
         cols.map((col) => cell(img, c, col)),
         h("td", { class: "row-actions" }, h("button", { class: "small ghost danger", title: t("removeImage"), "aria-label": t("removeImage"),
           onclick: async () => {
@@ -218,7 +225,7 @@ export async function render(view, { expId }, ctx) {
       return h("li", null, h("a", { href: `#/e/${exp.id}/i/${img.id}` },
         overlayThumb(img, urls[i], { className: "thumb-frame small" }),
         h("span", { class: "rl-main" }, h("span", { class: "rl-name" }, img.name),
-          h("span", { class: "thumb-badges" }, classBadge(img.result), reviewBadge(img.result))),
+          h("span", { class: "thumb-badges" }, classBadge(img.result), reviewBadge(img.result), qualityBadge(img.quality))),
         h("span", { class: "rl-area num" }, m?.areaMm2 != null ? h("span", null, fmtNumber(m.areaMm2, 1), h("small", null, " mm²")) : "")));
     }));
 

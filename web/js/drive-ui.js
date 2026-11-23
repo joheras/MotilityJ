@@ -1,11 +1,10 @@
 // Optional Google Drive UI. Everything here is hidden unless drive.isConfigured() (js/config.js has a client ID).
-// Calls only the functions of the contract in js/drive.js.
+// Calls only the functions of the contract in js/drive.js. The Drive inbox and phone captures are in
+// pages/inbox.js and pages/capture.js.
 import * as drive from "./drive.js";
-import * as db from "./db.js";
 import { h } from "./dom.js";
 import { makeBackup, restoreBackup } from "./export.js";
 import { t } from "./i18n.js";
-import { importFile, isImageFile } from "./images.js";
 import { busy, chooseDialog, idle, showError, toast } from "./ui.js";
 
 export function driveEnabled() {
@@ -66,24 +65,4 @@ export async function restoreFromDrive() {
     busy(t("restoring"));
     return await restoreBackup(await call("downloadBackup", id));
   } catch (e) { showError(e); return 0; } finally { idle(); }
-}
-
-/** Imports one photo from MotilityJ/Inbox in Drive into the experiment. Returns true when an image was added. */
-export async function importFromInbox(experimentId) {
-  try {
-    await ensureConnected();
-    busy(t("loading"));
-    const list = await call("listInbox");
-    idle();
-    const id = await chooseDialog(t("driveInboxTitle"), list.map((f) => ({ value: f.id, label: f.name })), { empty: t("driveInboxEmpty") });
-    if (!id) return false;
-    const item = list.find((f) => f.id === id);
-    busy(t("importingN", { i: 1, n: 1 }));
-    const blob = await call("downloadFile", id);
-    const file = new File([blob], item.name, { type: blob.type });
-    if (!isImageFile(file)) throw new Error(t("unsupportedFile", { name: item.name }));
-    await db.putImage({ id: db.newId(), experimentId, name: item.name, added: Date.now(), notes: item.sidecar?.notes || "", result: null, ...(await importFile(file)) });
-    await db.touchExperiment(experimentId);
-    return true;
-  } catch (e) { showError(e); return false; } finally { idle(); }
 }

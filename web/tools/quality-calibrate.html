@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quality check calibration</title>
+  <style>
+    body { font: 13px/1.45 system-ui, sans-serif; margin: 16px; background: #fff; color: #17202a; }
+    table { border-collapse: collapse; margin: 8px 0 20px; }
+    td, th { border: 1px solid #ccd; padding: 2px 6px; text-align: right; }
+    th:first-child, td:first-child { text-align: left; }
+    .bad { color: #b91c1c; font-weight: 600; } .ok { color: #0f766e; }
+  </style>
+</head>
+<body>
+<h1>Photo quality check: calibration</h1>
+<p>Served by <code>web/tools/quality_calibrate.py</code> (dataset photos and degraded copies under <code>/calib/</code>).
+  Query: <code>?kinds=orig,blur3&amp;limit=50</code>. Runs <code>js/quality.js</code> on every image and prints, per kind of image, how often the expected warning is raised,
+  how often any warning is raised, and the range of each measure.</p>
+<p id="status">Running…</p>
+<div id="out"></div>
+<script type="module">
+import { checkPhoto, THRESHOLDS } from "../js/quality.js";
+
+const status = document.getElementById("status"), out = document.getElementById("out");
+const params = new URLSearchParams(location.search);
+const only = params.get("kinds")?.split(","), limit = Number(params.get("limit")) || Infinity;
+const counts = {};
+const manifest = (await (await fetch("/calib/manifest.json")).json())
+  .filter((m) => (!only || only.includes(m.kind)) && (counts[m.kind] = (counts[m.kind] || 0) + 1) <= limit);
+const rows = [];
+const times = [];
+for (const [i, m] of manifest.entries()) {
+  const blob = await (await fetch(`/calib/${m.file}`)).blob();
+  const t0 = performance.now();
+  const r = await checkPhoto(blob);
+  times.push(performance.now() - t0);
+  rows.push({ ...m, r, codes: r.items.map((x) => x.code), levels: r.items.map((x) => `${x.code}:${x.level}`) });
+  if (i % 20 === 0) status.textContent = `${i + 1} / ${manifest.length}`;
+}
+window.__calib = rows;
+
+const KEYS = ["ms", "strength", "plateFraction", "offCentre", "outside", "aspect", "sharpness", "contrast", "median", "p99", "clipped", "glare", "plateDiameterPx"];
+const q = (xs, p) => { const s = xs.filter((x) => x != null && Number.isFinite(x)).sort((a, b) => a - b); return s.length ? s[Math.min(s.length - 1, Math.floor(p * (s.length - 1) + 0.5))] : null; };
+const fmt = (x) => (x == null ? "–" : Math.abs(x) >= 100 ? x.toFixed(0) : Math.abs(x) >= 1 ? x.toFixed(2) : x.toFixed(4));
+const kinds = [...new Set(rows.map((r) => r.kind))];
+
+let html = `<h2>Detection per kind</h2><table><tr><th>kind</th><th>n</th><th>expected warning raised</th><th>any warning</th><th>any "bad"</th><th>codes raised (count)</th></tr>`;
+for (const k of kinds) {
+  const rs = rows.filter((r) => r.kind === k);
+  const exp = rs[0].expect;
+  if (exp.includes("?")) { html += `<tr><td>${k}</td><td>${rs.length}</td><td>(not scored)</td><td>${rs.filter((r) => r.codes.length).length}</td><td></td><td></td></tr>`; continue; }
+  const hit = exp.length ? rs.filter((r) => r.codes.some((c) => exp.includes(c))).length : null;
+  const any = rs.filter((r) => r.codes.length).length, bad = rs.filter((r) => r.r.level === "bad").length;
+  const counts = {};
+  rs.forEach((r) => r.levels.forEach((c) => { counts[c] = (counts[c] || 0) + 1; }));
+  const good = exp.length ? hit === rs.length : any === 0;
+  html += `<tr><td>${k}</td><td>${rs.length}</td><td class="${good ? "ok" : "bad"}">${hit == null ? "(none expected)" : `${hit}/${rs.length}`}</td>
+    <td class="${!exp.length && any ? "bad" : ""}">${any}</td><td>${bad}</td><td style="text-align:left">${Object.entries(counts).map(([c, n]) => `${c} ${n}`).join(", ")}</td></tr>`;
+}
+html += `</table><h2>Measures per kind (min · p5 · median · p95 · max)</h2><table><tr><th>kind</th>${KEYS.map((k) => `<th>${k}</th>`).join("")}</tr>`;
+for (const k of kinds) {
+  const rs = rows.filter((r) => r.kind === k);
+  html += `<tr><td>${k}</td>${KEYS.map((key) => { const v = rs.map((r) => r.r.metrics[key]); return `<td>${[0, 0.05, 0.5, 0.95, 1].map((p) => fmt(q(v, p))).join(" · ")}</td>`; }).join("")}</tr>`;
+}
+html += `</table><h2>Good photos flagged</h2><ul>${rows.filter((r) => !r.expect.length && r.codes.length).map((r) => `<li>${r.file} (${r.source}): ${r.levels.join(", ")}</li>`).join("") || "<li>none</li>"}</ul>`;
+html += `<h2>Degraded copies missed</h2><ul>${rows.filter((r) => r.expect.length && !r.expect.includes("?") && !r.codes.some((c) => r.expect.includes(c))).map((r) => `<li>${r.file}: ${r.levels.join(", ") || "no warning"}</li>`).join("") || "<li>none</li>"}</ul>`;
+html += `<p>Time per image (decode + check, ${rows.length} images): median ${q(times, 0.5).toFixed(0)} ms, p95 ${q(times, 0.95).toFixed(0)} ms.</p>`;
+html += `<pre>${JSON.stringify(THRESHOLDS, null, 1)}</pre>`;
+out.innerHTML = html;
+status.textContent = `Done: ${rows.length} images.`;
+</script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>MotilityJ with a fake Google Drive</title>
+  <link rel="stylesheet" href="../css/styles.css" />
+  <style>
+    .mock-banner { background: #7c3aed; color: #fff; font: 600 12px/1.4 system-ui, sans-serif; padding: 4px 12px; text-align: center; }
+    .mock-banner button { font: inherit; padding: 0 8px; min-height: 0; margin-left: 8px; }
+  </style>
+</head>
+<body>
+<!--
+  Development page (not linked from the app, not precached): the whole app with js/drive.js talking to the in-memory
+  fake Drive API and fake Google sign-in of tools/drive-fake.js, to try Capture -> Drive inbox -> Inbox -> Import &
+  analyse end to end without a Google account. Serve web/ (python3 -m http.server 8090 --directory web) and open
+  /tools/capture-mock.html#/capture. The fake Drive lives in memory: a reload empties it (the upload queue in
+  IndexedDB "motilityj-drive-queue-mock" stays). window.__fd is the fake Drive, window.__online toggles the network.
+-->
+<div class="mock-banner">Fake Google Drive (development) · <span id="mock-files">0 files</span>
+  <button type="button" id="mock-online">Go offline</button></div>
+<div id="app"><div class="center"><p class="muted">Loading…</p></div></div>
+<script type="module">
+import * as drive from "../js/drive.js";
+import { FakeDrive, fakeGis } from "./drive-fake.js";
+
+const fd = new FakeDrive();
+const gis = fakeGis(fd);
+window.__fd = fd;
+window.__drive = drive;
+window.__online = true;
+drive._setTestHooks({ clientId: "mock-client.apps.googleusercontent.com", fetch: fd.fetch, gis, dbName: "motilityj-drive-queue-mock",
+  isOnline: () => window.__online, device: "MockPhone" });
+
+const filesEl = document.getElementById("mock-files"), onlineBtn = document.getElementById("mock-online");
+setInterval(() => {
+  const files = [...fd.files.values()].filter((f) => !f.mimeType.includes("folder"));
+  filesEl.textContent = `${files.length} files (${files.map((f) => f.name.split(" ").slice(-1)[0]).join(", ") || "—"})`;
+}, 500);
+onlineBtn.onclick = () => {
+  window.__online = !window.__online;
+  onlineBtn.textContent = window.__online ? "Go offline" : "Go online";
+  if (window.__online) window.dispatchEvent(new Event("online"));
+};
+await import("../js/app.js");
+</script>
+</body>
+</html>

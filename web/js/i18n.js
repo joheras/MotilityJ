@@ -171,7 +171,71 @@ const en = {
   drive_error: "Google Drive error: try to connect again.",
   driveSave: "Save to Drive", driveSaving: "Saving to Google Drive…", driveSaved: "“{name}” saved to Google Drive.",
   driveRestore: "Restore from Drive", driveRestoreTitle: "Backups in Google Drive", driveNoBackups: "There are no backups in MotilityJ/Backups.",
-  driveInbox: "From Drive inbox", driveInboxTitle: "Photos in MotilityJ/Inbox", driveInboxEmpty: "The inbox is empty.",
+  driveInbox: "From Drive inbox…",
+
+  // photo quality (quality.js)
+  qualityTitle: "Photo quality", qualityOk: "Good photo", qualityScore: "Quality {score}/100",
+  qualityWarnN: "{n} warning(s)", qualityBadge: "Photo", qualityBadgeHint: "Photo quality warnings: open the image to see them",
+  qualityLead: "You can continue, but the analysis may be less accurate.", qualityHowTo: "How to photograph plates",
+  qualityImported: "{n} photo(s) with quality warnings (marked ⚠ Photo).", qualityChecking: "Checking the photo…",
+  q_plate_not_found: "The plate could not be found in the photo.",
+  q_plate_not_found_tip: "Photograph one dish from right above, filling most of the picture, on a dark uniform background. You can still fit the circle by hand.",
+  q_plate_cut: "The plate is partly outside the photo ({pct} % of its radius).",
+  q_plate_cut_tip: "Frame the whole dish with a small margin around the rim: the rim gives the scale.",
+  q_plate_small: "The plate fills only {pct} % of the photo.",
+  q_plate_small_tip: "Move closer (no digital zoom) or use Crop to plate: the automatic analysis expects the dish to fill the picture.",
+  q_off_centre: "The plate is off-centre.",
+  q_off_centre_tip: "Centre the dish, or use Crop to plate: the automatic analysis looks for it in the middle of the picture.",
+  q_plate_frame: "The automatic analysis may not find this plate.",
+  q_plate_frame_tip: "Use Crop to plate, or check the plate circle after the analysis.",
+  q_tilt: "The plate looks oval ({pct} %): the phone was not parallel to it.",
+  q_tilt_tip: "Hold the phone flat, right above the centre of the dish (a stand helps); areas are measured on a circle.",
+  q_low_resolution: "Low resolution: the plate is about {px} px across.",
+  q_low_resolution_tip: "Use the original photo at full camera resolution (at least 600 px across the plate); messaging apps reduce it.",
+  q_blur: "The photo looks out of focus.",
+  q_blur_tip: "Tap on the agar to focus, hold the phone steady or use a stand, and avoid digital zoom. The edge of the growth must be sharp.",
+  q_dark: "The photo is very dark.", q_dark_tip: "Add light (diffuse, from the sides or from below) instead of raising the exposure afterwards.",
+  q_overexposed: "Over-exposed: {pct} % of the plate is pure white.", q_overexposed_tip: "Lower the light or the exposure (tap the agar and slide the sun icon down).",
+  q_glare: "Glare or reflections on the plate ({pct} % of it).",
+  q_glare_tip: "Remove the lid, and move the lamps so they are not reflected in the agar; diffuse light from the sides works best.",
+  q_low_contrast: "Very low contrast: the growth may not stand out from the agar.",
+  q_low_contrast_tip: "Use a dark, matte background (black card) under the dish and avoid haze on the lid.",
+
+  // capture (pages/capture.js)
+  capture: "Capture", captureTitle: "Capture plates",
+  captureLead: "Photograph plates with this phone or tablet, check each photo, and add them to an experiment or send them to your Google Drive to analyse them later on a computer.",
+  captureLeadNoDrive: "Photograph plates with this phone or tablet, check each photo and add them to an experiment.",
+  captureData: "Plate data", captureDataLead: "Given to every photo of this batch. Do not write data that identify patients or people.",
+  captureTarget: "Experiment", captureNewExperiment: "New experiment…", captureNewName: "Name of the new experiment",
+  captureNotes: "Notes", capturePhotos: "Photos",
+  capturePhotosLead: "One plate per photo, from right above, centred, the whole rim visible, on a dark background, without the lid.",
+  captureTips: "Tips", captureChoose: "Choose photos", captureRetake: "Retake", captureKeep: "Keep", captureCrop: "Crop to plate",
+  captureCropped: "Cropped to the plate.", captureRemove: "Remove photo", captureNoPhotos: "No photos yet.",
+  captureAddLocal: "Add {n} photo(s) to the experiment", captureAnalyseNow: "Analyse them now",
+  captureSendDrive: "Send {n} photo(s) to the Drive inbox", captureDriveLead: "They go to MotilityJ/Inbox in your Google Drive, with the data above and the quality check. Open MotilityJ → Inbox on a computer to import and analyse them.",
+  captureAdded: "{n} photo(s) added to “{name}”.", captureQueued: "{n} photo(s) queued for the Drive inbox.",
+  captureOffline: "You are offline: photos are kept on this device and sent when the connection is back.",
+  captureConnectDrive: "Connect Google Drive to send the photos.", captureExpiredDrive: "The Google Drive session expired.",
+  captureReconnect: "Reconnect", captureConnect: "Connect Google Drive",
+  captureQueue: "Waiting to be sent from this device", captureSent: "Sent to the inbox from this device",
+  captureSendNow: "Send now", captureQueueWaiting: "Waiting to be sent", captureQueueUploading: "Uploading…",
+  captureQueueFailed: "Failed: {error}", captureQueueDone: "✓ In the Drive inbox", captureQueueDelete: "Delete",
+  captureQueueDeleteConfirm: "This photo has not been sent yet. Delete it from this device?",
+  captureReviewTitle: "Check the photo", captureNeedTarget: "Choose an experiment first.",
+  openExperiment: "Open the experiment",
+
+  // inbox (pages/inbox.js)
+  inbox: "Inbox", inboxTitle: "Drive inbox",
+  inboxLead: "Photos sent from phones with Capture to MotilityJ/Inbox in your Google Drive. Import & analyse adds the selected ones to an experiment with their data and moves them to Inbox/Processed.",
+  inboxNoDrive: "The Drive inbox needs Google Drive, which is not configured in this installation. Copy the photos to this computer and add them on the experiment page instead.",
+  inboxConnect: "Connect Google Drive to see the photos sent from phones.", inboxRefresh: "Refresh",
+  inboxEmpty: "The inbox is empty. On a phone, open MotilityJ → Capture, connect the same Google account and send photos.",
+  inboxTarget: "Add to the experiment", inboxAnalyse: "Analyse after importing",
+  inboxImport: "Import & analyse ({n})", inboxImportOnly: "Import ({n})", inboxSkip: "Skip",
+  inboxSkipConfirm: "Move {n} photo(s) to Inbox/Processed without importing them?",
+  inboxImported: "{n} photo(s) imported into “{name}”.", inboxReading: "Reading the Drive inbox…",
+  inboxDownloading: "Importing {i} of {n}…", inboxNoData: "No plate data", inboxSelected: "{n} selected",
+  inboxFrom: "{date}, {device}", inboxCount: "{n} photo(s) in the inbox",
 
   // help
   helpLead: "MotilityJ classifies bacterial motility in photos of Petri dishes and measures the area of the growth.",
@@ -248,6 +312,25 @@ const en = {
   help_formats_title: "Image formats",
   help_formats_html: `<p>JPEG, PNG, WebP and the other formats of your browser are read directly. <b>TIFF</b> files are read by MotilityJ itself: 8 or 16 bits, grey, RGB or palette, in strips or tiles, uncompressed or compressed with LZW, PackBits, Deflate (ZIP) or JPEG. Not supported: BigTIFF, separate colour planes, floating-point samples and old-style JPEG; convert those to PNG first. Only the first page of a multi-page TIFF is used. iPhone HEIC photos taken from the app are converted to JPEG by the phone.</p>
   <p>Images are stored reduced to at most 2000 pixels on the longest side, which is enough for the analysis and keeps the browser storage small. The manual scale (pixels per mm) refers to the original image.</p>`,
+  help_photos_title: "How to photograph plates",
+  help_photos_html: `<p>The analysis is only as good as the photo. A few minutes setting up a fixed place to take the photos pays off:</p>
+  <ul>
+    <li><b>Dark, matte, uniform background</b> under the dish (black card or cloth), so the agar and the growth stand out.</li>
+    <li><b>No lid, no glare</b>: take the lid off and use diffuse light from the sides (or a light box from below). Move the lamps until they are not reflected in the agar.</li>
+    <li><b>The whole rim visible</b>, with a small margin: the rim is used to find the plate and for the scale in mm.</li>
+    <li><b>Centred and filling most of the picture</b>: the automatic analysis looks for the dish in the middle, filling the photo. If it is small or off-centre, use <b>Crop to plate</b> on the Capture page.</li>
+    <li><b>Phone parallel to the plate</b>, right above its centre; a phone stand or a box with a hole keeps the distance and the angle the same for every photo.</li>
+    <li><b>Sharp</b>: tap on the agar to focus, hold still, no digital zoom; keep the original resolution.</li>
+    <li>One plate per photo, the same light and camera settings for the whole experiment.</li>
+  </ul>
+  <p>MotilityJ checks every photo when it is added and shows non-blocking warnings: plate not found, cut off, small, off-centre or oval (phone tilted); out of focus; too dark, over-exposed, glare or low contrast; low resolution. You can keep the photo anyway; photos with warnings are marked <span class="badge cat-i">⚠ Photo</span> and the review page lists the warnings.</p>`,
+  help_capture_title: "Capture on the phone, analyse on the computer",
+  help_capture_html: `<p><b>Capture</b> (top bar) is made for phones in the lab: fill in the plate data once (experiment, strain, condition, replicates, incubation time), then <b>Take photo</b> for each plate. Each photo is checked at once, with the plate circle drawn on it: <b>Keep</b> it, <b>Retake</b> it or <b>Crop to plate</b>. Then either:</p>
+  <ul>
+    <li><b>Add to the experiment</b> on this device (and analyse them now if you like), or</li>
+    <li><b>Send to the Drive inbox</b>: the photos and their data go to <code>MotilityJ/Inbox</code> in your Google Drive. Without a connection they wait on the phone and are sent when it is back.</li>
+  </ul>
+  <p>On the computer, open <b>Inbox</b> (or <b>From Drive inbox…</b> on an experiment), select the photos, choose the experiment and <b>Import &amp; analyse</b>: the strain, condition, replicates, incubation time and notes are filled in from the phone, and the imported photos are moved to <code>Inbox/Processed</code>. MotilityJ only sees the files it created in your Drive.</p>`,
   help_install_title: "Phones, tablets and offline use",
   help_install_html: `<p>MotilityJ works on phones and tablets: <b>Take photo</b> opens the rear camera. You can also <b>install</b> it as an app: it then opens from the home screen in its own window and works without an internet connection.</p>
   <div class="install-steps">

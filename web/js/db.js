@@ -4,10 +4,12 @@
 // experiment.meta = assay defaults, image.meta = per-image metadata and overrides (see metadata.js)
 // image = { id, experimentId, name, blob, thumb, width, height, origWidth, origHeight, scale, added,
 //           notes, meta, result: null | { klass, confidence, plate, contour, areaPx, edited, analysedAt },
-//           capturedAt?, seriesId?, timeH? }
+//           capturedAt?, seriesId?, timeH?, quality?, source? }
 //   scale = width / origWidth (the stored image may be downscaled; coordinates are in stored pixels)
 //   capturedAt = capture time in ms (EXIF DateTimeOriginal, else the file's lastModified), recorded at import
 //   seriesId / timeH = plate series the image belongs to and its time point in hours (see series.js)
+//   quality = photo quality report at import (quality-ui.js storedQuality; plate in stored pixels), null if unchecked
+//   source = { drive, device, sentAt } for photos imported from the Drive inbox (pages/inbox.js)
 // series = { id, experimentId, name, created, params } : one physical plate photographed over time
 
 import { DEFAULT_PLATE_DIAMETER_MM } from "./config.js";

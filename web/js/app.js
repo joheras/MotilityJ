@@ -1,13 +1,15 @@
 // MotilityJ web: app shell (top bar with Drive status, update banner), hash router and boot.
 import * as db from "./db.js";
 import { h } from "./dom.js";
-import { driveStatusButton } from "./drive-ui.js";
+import { driveEnabled, driveStatusButton } from "./drive-ui.js";
 import { t } from "./i18n.js";
 import { applyUpdate, canInstall, onPwaChange, promptInstall, registerServiceWorker, updateAvailable } from "./pwa.js";
 import { showError } from "./ui.js";
+import * as capturePage from "./pages/capture.js";
 import * as experimentPage from "./pages/experiment.js";
 import * as experimentsPage from "./pages/experiments.js";
 import * as helpPage from "./pages/help.js";
+import * as inboxPage from "./pages/inbox.js";
 import * as reviewPage from "./pages/review.js";
 import * as seriesPage from "./pages/series.js";
 import * as settingsPage from "./pages/settings.js";
@@ -17,6 +19,8 @@ const ROUTES = [
   [/^\/e\/([^/]+)\/?$/, experimentPage, (m) => ({ expId: m[1] })],
   [/^\/e\/([^/]+)\/i\/([^/]+)\/?$/, reviewPage, (m) => ({ expId: m[1], imageId: m[2] })],
   [/^\/e\/([^/]+)\/s\/([^/]+)\/?$/, seriesPage, (m) => ({ expId: m[1], seriesId: m[2] })],
+  [/^\/capture\/?$/, capturePage, () => ({})],
+  [/^\/inbox(?:\/([^/]+))?\/?$/, inboxPage, (m) => ({ expId: m[1] })],
   [/^\/settings\/?$/, settingsPage, () => ({})],
   [/^\/help(?:\/([\w-]+))?\/?$/, helpPage, (m) => ({ section: m[1] })],
 ];
@@ -27,7 +31,9 @@ let token = 0;
 
 function topbar() {
   const install = h("button", { class: "small", onclick: promptInstall, title: t("installHint") }, t("install"));
-  const links = [["#/", t("experiments"), "nav-experiments"], ["#/settings", t("settings"), ""], ["#/help", t("help"), ""]]
+  const links = [["#/", t("experiments"), "nav-experiments"], ["#/capture", h("span", null, "📷 ", t("capture")), "nav-capture"],
+    driveEnabled() ? ["#/inbox", t("inbox"), "nav-inbox"] : null, ["#/settings", t("settings"), ""], ["#/help", t("help"), ""]]
+    .filter(Boolean)
     .map(([href, label, cls]) => h("a", { href, class: ["topbar-link", cls] }, label));
   const bar = h("header", { class: "topbar" },
     h("a", { href: "#/", class: "brand" }, h("span", { class: "logo", "aria-hidden": "true" }, "◉"), " MotilityJ"),

@@ -10,6 +10,7 @@ import { t } from "../i18n.js";
 import { MEASURES, measure } from "../measure.js";
 import { measureSettings } from "../metadata.js";
 import { imageMetaFields } from "../metadata-ui.js";
+import { qualityBadge, qualityList } from "../quality-ui.js";
 import { busy, confirmDialog, idle, showError, toast } from "../ui.js";
 
 const MODES = ["view", "vertices", "draw", "plate", "sam"];
@@ -465,6 +466,9 @@ export async function render(view, { expId, imageId }, ctx) {
   const panel = h("div", { class: "panel" },
     h("div", { class: "section-head" }, h("h2", { class: "file-title", title: img.name }, img.name), savedEl),
     statusEl,
+    img.quality?.items?.length ? h("details", { class: "quality-box", open: img.quality.level === "bad" },
+      h("summary", { class: "small" }, qualityBadge(img.quality), " ", t("qualityWarnN", { n: img.quality.items.length })),
+      qualityList(img.quality)) : null,
     h("div", { class: "tabs class-tabs", role: "group", "aria-label": t("colClass") }, classBtns),
     h("div", { class: "area-box" }, h("div", { class: "muted small" }, t("growthArea")), areaEl, scaleEl,
       h("details", { class: "measures-box", open: true }, h("summary", { class: "small" }, t("measurements")), measuresEl)),
