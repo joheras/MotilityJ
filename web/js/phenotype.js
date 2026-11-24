@@ -32,10 +32,11 @@
 //   classifyPhenotype(image, exp, settings, images = [image]) -> Phenotype | null
 //   classifyImages(images, exp, settings, only = null) -> Map(image.id -> Phenotype | null)  (references computed
 //     once; `only`: classify just that image id)
-//   Phenotype = { label, level, levels, positive, value, measure, ratio, capped, isReference,
+//   Phenotype = { label, level, levels, positive, sign ("+" | "−" | null), value, measure, ratio, capped, isReference,
 //                 rule: { id, name, mode, assayType }, reference: { mean, n, field, value } | null, warnings: [codes] }
 //   label/level are null when the image cannot be classified (see warnings: notAnalysed, noMeasure, noAssayType,
 //   noRule, refMissing). level is 0..levels-1 in the order of the categories. null = the experiment has no rule set.
+//   Relative rule sets need the experiment's images: pass them as `images`, or the reference is missing.
 import { effectiveMeta, isEmpty, measureSettings } from "./metadata.js";
 import { measure } from "./measure.js";
 
@@ -214,7 +215,7 @@ export function classifyImages(images, exp, settings, only = null) {
 function classifyRow(row, rules, reference) {
   const { img, eff } = row;
   const rs = ruleFor(eff, rules);
-  const base = { label: null, level: null, levels: 0, positive: null, value: null, measure: null, ratio: null, capped: false,
+  const base = { label: null, level: null, levels: 0, positive: null, sign: null, value: null, measure: null, ratio: null, capped: false,
     isReference: false, rule: null, reference: null, warnings: [] };
   if (!rs) {
     base.warnings.push(isEmpty(eff.assayType) ? "noAssayType" : "noRule");
@@ -239,7 +240,7 @@ function classifyRow(row, rules, reference) {
   // anyZone: strictly larger than the inoculum footprint; the others: min inclusive.
   const k = rs.mode === "anyZone" ? (v > rs.minZoneMm ? 1 : 0) : categoryIndex(cats, x);
   if (k < 0) return base;
-  return { ...base, label: cats[k].label, level: k, positive: cats[k].positive };
+  return { ...base, label: cats[k].label, level: k, positive: cats[k].positive, sign: cats[k].positive ? "+" : "−" };
 }
 
 /** Phenotype of one image. `images`: the experiment's images, needed by relative rule sets (reference strain). */

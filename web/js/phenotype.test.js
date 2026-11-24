@@ -46,6 +46,7 @@ export function runTests() {
   check("negative is not positive", ph.get(neg.id).positive, false);
   check("low", ph.get(low.id).level, 1);
   check("low positive", ph.get(low.id).positive, true);
+  check("sign", ph.get(low.id).sign + ph.get(neg.id).sign, "+−");
   check("intermediate", ph.get(mid.id).level, 2);
   check("high", ph.get(high.id).level, 3);
   check("reference image flagged", ph.get(ref2.id).isReference, true);

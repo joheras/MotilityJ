@@ -2,7 +2,7 @@
 // fills in the list of app files and a version hash of their content: run it after changing any file.
 // It precaches the whole app so that it starts and analyses images offline. Each version has its own
 // cache; a new version waits until the page asks it to take over ("Reload" in the app).
-const VERSION = "a0f34384f16d";
+const VERSION = "021d9f4855f1";
 const FILES = [
  "css/styles.css",
  "icons/apple-touch-icon.png",
