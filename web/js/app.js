@@ -65,6 +65,8 @@ async function route(view, links) {
     const target = a.getAttribute("href").slice(1);
     a.classList.toggle("active", target === "/" ? (path === "/" || path.startsWith("/e/")) : path.startsWith(target));
   }
+  try { ctx.settings = await db.getSettings(); } catch (e) { console.error(e); } // a restore may have added phenotype rule sets
+  if (my !== token) return;
   const el = h("div", { class: "page" });
   view.replaceChildren(el);
   window.scrollTo(0, 0);

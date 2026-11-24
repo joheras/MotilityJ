@@ -9,6 +9,8 @@ import { distToSegment, mmPerPx, polygonArea, simplify } from "../geometry.js";
 import { t } from "../i18n.js";
 import { MEASURES, measure } from "../measure.js";
 import { measureSettings } from "../metadata.js";
+import { classifyPhenotype } from "../phenotype.js";
+import { reviewPhenotype } from "../phenotype-ui.js";
 import { imageMetaFields } from "../metadata-ui.js";
 import { qualityBadge, qualityList } from "../quality-ui.js";
 import { busy, confirmDialog, idle, showError, toast } from "../ui.js";
@@ -335,6 +337,7 @@ export async function render(view, { expId, imageId }, ctx) {
   const classBtns = ["complete", "incomplete"].map((k) => h("button", { type: "button", class: `class-${k}`, onclick: () => setClass(k) }, t(k)));
   const areaEl = h("div", { class: "area-value" });
   const measuresEl = h("dl", { class: "measures" });
+  const phenotypeEl = h("div");
   const scaleEl = h("div", { class: "muted small" });
   const statusEl = h("div", { class: "small" });
   const savedEl = h("span", { class: "muted small saved" });
@@ -423,6 +426,7 @@ export async function render(view, { expId, imageId }, ctx) {
     measuresEl.replaceChildren(...MEASURES.filter((key) => key !== "areaMm2").flatMap((key) => [
       h("dt", null, t(`m_${key}`)),
       h("dd", null, m?.[key] == null ? "—" : fmtNumber(m[key], DIGITS[key] ?? 2))]));
+    phenotypeEl.replaceChildren(reviewPhenotype(classifyPhenotype({ ...img, result }, exp, ctx.settings, images), ctx.settings) || "");
   }
   function updatePanel() {
     classBtns.forEach((b, i) => b.classList.toggle("active", result?.klass === ["complete", "incomplete"][i]));
@@ -471,7 +475,7 @@ export async function render(view, { expId, imageId }, ctx) {
       qualityList(img.quality)) : null,
     h("div", { class: "tabs class-tabs", role: "group", "aria-label": t("colClass") }, classBtns),
     h("div", { class: "area-box" }, h("div", { class: "muted small" }, t("growthArea")), areaEl, scaleEl,
-      h("details", { class: "measures-box", open: true }, h("summary", { class: "small" }, t("measurements")), measuresEl)),
+      h("details", { class: "measures-box", open: true }, h("summary", { class: "small" }, t("measurements")), measuresEl), phenotypeEl),
     h("h3", null, t("edit")),
     h("div", { class: "mode-grid", role: "group" }, modeBtns),
     modeHelp,

@@ -4,6 +4,7 @@ import { tableRows, tidyRows } from "./columns.js";
 import { buildComparison, comparisonRows } from "./compare.js";
 import { t } from "./i18n.js";
 import { fieldDef, normalizeExperiment, normalizeImage } from "./metadata.js";
+import { mergeRuleSets } from "./phenotype.js";
 import { xlsxWorkbookBlob } from "./xlsx.js";
 
 export const BACKUP_FORMAT = "motilityj-backup";
@@ -100,10 +101,16 @@ export async function backupBlob(experiments) {
 /** Adds the experiments of a backup as new experiments. Returns how many were added. */
 export async function restoreBackup(data) {
   if (!data || data.format !== BACKUP_FORMAT || !Array.isArray(data.experiments)) throw new Error(t("restoreInvalid"));
+  const incoming = data.settings?.phenotypeRuleSets;
+  if (Array.isArray(incoming) && incoming.length) { // custom phenotype rule sets of the backup (existing ids are kept)
+    const st = await db.getSettings();
+    await db.saveSettings({ ...st, phenotypeRuleSets: mergeRuleSets(st.phenotypeRuleSets, incoming) });
+  }
   let n = 0;
   for (const e of data.experiments) {
     const now = Date.now();
-    const exp = normalizeExperiment({ id: db.newId(), name: e.name || t("untitled"), created: e.created || now, updated: now, meta: e.meta, compare: e.compare ?? null });
+    const exp = normalizeExperiment({ id: db.newId(), name: e.name || t("untitled"), created: e.created || now, updated: now, meta: e.meta, compare: e.compare ?? null,
+      ...(Array.isArray(e.phenotypeRules) ? { phenotypeRules: e.phenotypeRules } : {}) });
     await db.putExperiment(exp);
     const seriesIds = new Map(); // time series: ids of the backup -> new ids (older backups have none)
     for (const s of e.series || []) {

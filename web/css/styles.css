@@ -547,3 +547,31 @@ label.check input { width: 18px; height: 18px; margin: 0; }
 @media (max-width: 560px) {
   .compare-card .table-wrap { display: block; }
 }
+/* Motility phenotype (phenotype-ui.js): grey = negative, three blues = positive categories (light -> dark). */
+:root { --ph-lo-bg: #e0f2fe; --ph-lo-fg: #075985; --ph-mid-bg: #7dd3fc; --ph-mid-fg: #0c4a6e; --ph-hi-bg: #0369a1; --ph-hi-fg: #ffffff; }
+@media (prefers-color-scheme: dark) {
+  :root { --ph-lo-bg: #0c4a6e; --ph-lo-fg: #bae6fd; --ph-mid-bg: #0369a1; --ph-mid-fg: #e0f2fe; --ph-hi-bg: #7dd3fc; --ph-hi-fg: #082f49; }
+}
+.ph-neg { background: var(--na-bg); color: var(--na-fg); }
+.ph-lo { background: var(--ph-lo-bg); color: var(--ph-lo-fg); }
+.ph-mid { background: var(--ph-mid-bg); color: var(--ph-mid-fg); }
+.ph-hi { background: var(--ph-hi-bg); color: var(--ph-hi-fg); }
+.ph-badge .ph-ref { font-size: 0.8em; }
+.ph-cell { white-space: nowrap; }
+.ph-card .ph-count-list { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 10px; }
+.ph-count-row { justify-content: flex-start; }
+.ph-choices .check, .ph-modes .check, .ph-match .check { display: flex; gap: 8px; align-items: flex-start; }
+.ph-choices input, .ph-modes input, .ph-match input { width: auto; margin-top: 4px; }
+.ph-choices .tag, .ph-rule .tag { margin-left: 6px; }
+.ph-source { margin: 2px 0 0; overflow-wrap: anywhere; }
+.ph-match { display: flex; gap: 16px; flex-wrap: wrap; }
+.ph-review { margin-top: 10px; display: flex; flex-direction: column; gap: 2px; }
+.ph-review-main { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.warn-text { color: var(--i-fg); }
+.ph-rule-list { list-style: none; padding: 0; margin: 8px 0; display: flex; flex-direction: column; gap: 0; }
+.ph-rule { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.ph-editor { display: flex; flex-direction: column; gap: 12px; max-width: 720px; }
+.ph-cat-table input { min-width: 0; }
+.ph-cat-table td:first-child input { width: 7em; }
+.ph-cat-table .ph-pos { text-align: center; }
+.ph-cat-table .ph-pos input { width: auto; }

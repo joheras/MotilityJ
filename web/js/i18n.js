@@ -3,6 +3,7 @@
 // Placeholders: {name} is replaced by params.name.
 
 import { strings as dmStrings } from "./deepmotility/strings.js";
+import { strings as phStrings } from "./phenotype-strings.js";
 
 const en = {
   // shell
@@ -398,6 +399,7 @@ const en = {
 const LANGS = { en };
 const LANG = "en";
 Object.assign(en, dmStrings); // Deep-Motility tool (js/deepmotility/strings.js)
+Object.assign(en, phStrings); // phenotype rules (js/phenotype-strings.js)
 
 export function t(key, params) {
   let s = LANGS[LANG]?.[key] ?? en[key];

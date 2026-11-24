@@ -2,7 +2,7 @@
 // fills in the list of app files and a version hash of their content: run it after changing any file.
 // It precaches the whole app so that it starts and analyses images offline. Each version has its own
 // cache; a new version waits until the page asks it to take over ("Reload" in the app).
-const VERSION = "74b3b0a174a8";
+const VERSION = "34fdf0d783d4";
 const FILES = [
  "css/styles.css",
  "icons/apple-touch-icon.png",
@@ -53,6 +53,11 @@ const FILES = [
  "js/pages/review.js",
  "js/pages/series.js",
  "js/pages/settings.js",
+ "js/phenotype-strings.js",
+ "js/phenotype-ui.js",
+ "js/phenotype.js",
+ "js/phenotype.test.html",
+ "js/phenotype.test.js",
  "js/pwa.js",
  "js/quality-ui.js",
  "js/quality.js",
