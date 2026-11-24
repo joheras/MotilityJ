@@ -10,6 +10,7 @@ import * as experimentPage from "./pages/experiment.js";
 import * as experimentsPage from "./pages/experiments.js";
 import * as helpPage from "./pages/help.js";
 import * as inboxPage from "./pages/inbox.js";
+import * as isolatesPage from "./pages/isolates.js";
 import * as reviewPage from "./pages/review.js";
 import * as seriesPage from "./pages/series.js";
 import * as settingsPage from "./pages/settings.js";
@@ -21,6 +22,8 @@ const ROUTES = [
   [/^\/e\/([^/]+)\/s\/([^/]+)\/?$/, seriesPage, (m) => ({ expId: m[1], seriesId: m[2] })],
   [/^\/capture\/?$/, capturePage, () => ({})],
   [/^\/inbox(?:\/([^/]+))?\/?$/, inboxPage, (m) => ({ expId: m[1] })],
+  [/^\/e\/([^/]+)\/isolates\/?$/, isolatesPage, (m) => ({ expId: m[1] })],
+  [/^\/isolates\/?$/, isolatesPage, () => ({})],
   [/^\/settings\/?$/, settingsPage, () => ({})],
   [/^\/help(?:\/([\w-]+))?\/?$/, helpPage, (m) => ({ section: m[1] })],
 ];
@@ -63,7 +66,7 @@ async function route(view, links) {
   if (!page) { location.replace("#/"); return; }
   for (const a of links) {
     const target = a.getAttribute("href").slice(1);
-    a.classList.toggle("active", target === "/" ? (path === "/" || path.startsWith("/e/")) : path.startsWith(target));
+    a.classList.toggle("active", target === "/" ? (path === "/" || path.startsWith("/e/") || path.startsWith("/isolates")) : path.startsWith(target));
   }
   try { ctx.settings = await db.getSettings(); } catch (e) { console.error(e); } // a restore may have added phenotype rule sets
   if (my !== token) return;

@@ -1,10 +1,10 @@
-// Help: workflow, photographing plates, capture and Drive inbox, review and editing, AI outline, Deep-Motility, area, measurements, assay metadata, comparison vs control, phenotype rules, time series,
+// Help: workflow, photographing plates, capture and Drive inbox, review and editing, AI outline, Deep-Motility, area, measurements, assay metadata, comparison vs control, phenotype rules, isolate profiles, time series,
 // phones/install/offline, data and privacy.
 import { h } from "../dom.js";
 import { t } from "../i18n.js";
 import { canInstall, isPersisted, isStandalone, promptInstall } from "../pwa.js";
 
-const SECTIONS = ["workflow", "photos", "capture", "review", "sam", "deepmotility", "area", "measures", "metadata", "phenotype", "compare", "series", "formats", "install", "privacy"];
+const SECTIONS = ["workflow", "photos", "capture", "review", "sam", "deepmotility", "area", "measures", "metadata", "isolates", "phenotype", "compare", "series", "formats", "install", "privacy"];
 
 export async function render(view, { section }) {
   const install = h("div");

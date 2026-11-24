@@ -4,6 +4,7 @@
 
 import { strings as dmStrings } from "./deepmotility/strings.js";
 import { strings as phStrings } from "./phenotype-strings.js";
+import { strings as isoStrings } from "./isolates-strings.js";
 
 const en = {
   // shell
@@ -400,6 +401,7 @@ const LANGS = { en };
 const LANG = "en";
 Object.assign(en, dmStrings); // Deep-Motility tool (js/deepmotility/strings.js)
 Object.assign(en, phStrings); // phenotype rules (js/phenotype-strings.js)
+Object.assign(en, isoStrings); // isolate profiles (js/isolates-strings.js)
 
 export function t(key, params) {
   let s = LANGS[LANG]?.[key] ?? en[key];

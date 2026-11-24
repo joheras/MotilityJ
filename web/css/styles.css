@@ -575,3 +575,28 @@ label.check input { width: 18px; height: 18px; margin: 0; }
 .ph-cat-table td:first-child input { width: 7em; }
 .ph-cat-table .ph-pos { text-align: center; }
 .ph-cat-table .ph-pos input { width: auto; }
+/* Isolate profiles (js/pages/isolates.js) */
+label.inline-label { display: inline-flex; flex-direction: row; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--muted); white-space: nowrap; }
+.iso-tools { flex-wrap: wrap; align-items: center; }
+.iso-search { flex: 1 1 200px; max-width: 320px; }
+.iso-wrap { overflow-x: auto; }
+.iso-matrix th, .iso-matrix td { vertical-align: top; }
+.iso-matrix .iso-name { text-align: left; font-weight: 600; min-width: 110px; }
+.iso-matrix .iso-cell { min-width: 150px; padding: 4px; }
+.iso-matrix .empty-cell { text-align: center; vertical-align: middle; }
+.iso-cell-button { display: flex; gap: 8px; align-items: flex-start; width: 100%; text-align: left; background: none; border: 1px solid transparent; border-radius: 8px; padding: 4px; color: inherit; font: inherit; cursor: pointer; }
+.iso-cell-button:hover, .iso-cell-button:focus-visible { border-color: var(--accent); background: var(--surface-2); }
+.iso-cell-text { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; min-width: 0; }
+.thumb-frame.iso-thumb { width: 44px; flex: none; border-radius: 6px; }
+.iso-profile { min-width: 130px; }
+.iso-profile code { font-size: 0.85rem; }
+.sort-button { background: none; border: 0; padding: 0; font: inherit; font-weight: 600; color: inherit; cursor: pointer; white-space: nowrap; }
+.sort-button:hover { color: var(--accent); }
+.iso-dialog { max-width: min(860px, 92vw); }
+.iso-dialog .plates { max-height: 60vh; overflow-y: auto; }
+.iso-matrix .iso-name .small { text-transform: none; font-weight: 400; }
+@media (max-width: 560px) {
+  .iso-link-label { display: none; }
+  .page-head .head-actions > .iso-link { flex: 0 0 auto; }
+}
+.iso-matrix .iso-name, .iso-matrix thead th:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); }
