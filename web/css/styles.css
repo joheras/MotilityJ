@@ -581,7 +581,7 @@ label.inline-label { display: inline-flex; flex-direction: row; align-items: cen
 .iso-search { flex: 1 1 200px; max-width: 320px; }
 .iso-wrap { overflow-x: auto; }
 .iso-matrix th, .iso-matrix td { vertical-align: top; }
-.iso-matrix .iso-name { text-align: left; font-weight: 600; min-width: 110px; }
+.iso-matrix .iso-name { text-align: left; font-weight: 600; min-width: 110px; text-transform: none; letter-spacing: 0; color: var(--text); font-size: 0.9rem; }
 .iso-matrix .iso-cell { min-width: 150px; padding: 4px; }
 .iso-matrix .empty-cell { text-align: center; vertical-align: middle; }
 .iso-cell-button { display: flex; gap: 8px; align-items: flex-start; width: 100%; text-align: left; background: none; border: 1px solid transparent; border-radius: 8px; padding: 4px; color: inherit; font: inherit; cursor: pointer; }
@@ -618,4 +618,10 @@ label.inline-label { display: inline-flex; flex-direction: row; align-items: cen
   .fig-layout { grid-template-columns: 1fr; }
   .fig-preview-wrap { position: static; order: -1; }
   .fig-controls { max-height: none; }
+}
+
+/* Phones: the links, Capture, Drive and Install do not fit next to the brand: they wrap below it. */
+@media (max-width: 560px) {
+  .topbar { flex-wrap: wrap; gap: 6px 10px; }
+  .topbar-user { flex: 1 1 100%; flex-wrap: wrap; justify-content: space-between; gap: 6px 8px; font-size: 0.85rem; }
 }
