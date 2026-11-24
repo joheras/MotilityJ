@@ -8,6 +8,7 @@ import { rowContext, visibleColumns } from "../columns.js";
 import { buildComparison } from "../compare.js";
 import { comparisonCard } from "../compare-ui.js";
 import { BACKUP_EXT, backupBlob, comparisonTable, csvBlob, download, excelBlob, safeFileName, tidyTable } from "../export.js";
+import { figureDialog } from "../figure-ui.js";
 import { t } from "../i18n.js";
 import { ACCEPT, importFile, isImageFile } from "../images.js";
 import { fieldDef, isEmpty } from "../metadata.js";
@@ -143,6 +144,7 @@ export async function render(view, { expId }, ctx) {
       { label: t("exportExcelItem"), disabled: none, onClick: () => download(excelBlob(images, exp, settings), `${safeFileName(exp.name)}.xlsx`) },
       { label: t("exportCsvItem"), disabled: none, onClick: () => download(csvBlob(tidyTable(images, exp, settings)), `${safeFileName(exp.name)}.csv`) },
       { label: t("exportComparisonItem"), disabled: !cmp.nControls, onClick: () => download(csvBlob(comparisonTable(images, exp, settings)), `${safeFileName(exp.name)}-comparison.csv`) },
+      { label: t("figItem"), disabled: !done, onClick: () => figureDialog(exp, images, settings) },
       { label: t("backupItem"), onClick: backup },
       driveEnabled() ? { label: t("driveSave"), onClick: () => saveExperimentToDrive(exp) } : null,
     ], { title: t("exportHint") });

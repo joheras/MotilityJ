@@ -2,7 +2,7 @@
 // fills in the list of app files and a version hash of their content: run it after changing any file.
 // It precaches the whole app so that it starts and analyses images offline. Each version has its own
 // cache; a new version waits until the page asks it to take over ("Reload" in the app).
-const VERSION = "96dd198486af";
+const VERSION = "48fe8cf2b916";
 const FILES = [
  "css/styles.css",
  "icons/apple-touch-icon.png",
@@ -38,6 +38,11 @@ const FILES = [
  "js/drive.mock-test.html",
  "js/exif.js",
  "js/export.js",
+ "js/figure-strings.js",
+ "js/figure-ui.js",
+ "js/figure.js",
+ "js/figure.test.html",
+ "js/figure.test.js",
  "js/geometry.js",
  "js/i18n.js",
  "js/images.js",

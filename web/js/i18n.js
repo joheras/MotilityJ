@@ -5,6 +5,7 @@
 import { strings as dmStrings } from "./deepmotility/strings.js";
 import { strings as phStrings } from "./phenotype-strings.js";
 import { strings as isoStrings } from "./isolates-strings.js";
+import { strings as figStrings } from "./figure-strings.js";
 
 const en = {
   // shell
@@ -402,6 +403,7 @@ const LANG = "en";
 Object.assign(en, dmStrings); // Deep-Motility tool (js/deepmotility/strings.js)
 Object.assign(en, phStrings); // phenotype rules (js/phenotype-strings.js)
 Object.assign(en, isoStrings); // isolate profiles (js/isolates-strings.js)
+Object.assign(en, figStrings); // figure builder (js/figure-strings.js)
 
 export function t(key, params) {
   let s = LANGS[LANG]?.[key] ?? en[key];

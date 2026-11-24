@@ -70,7 +70,7 @@ export function aggregatePhenotype(list) {
   const counts = new Map();
   for (const p of ps) {
     const level = String(p.level ?? p.label ?? "");
-    const c = counts.get(level) || { level, label: p.label ?? level, n: 0, rule: p.rule ?? null, sign: p.sign };
+    const c = counts.get(level) || { level, label: p.label ?? level, n: 0, rule: p.rule?.name ?? p.rule ?? null, sign: p.sign };
     c.n++;
     counts.set(level, c);
   }

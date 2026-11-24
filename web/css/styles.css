@@ -600,3 +600,22 @@ label.inline-label { display: inline-flex; flex-direction: row; align-items: cen
   .page-head .head-actions > .iso-link { flex: 0 0 auto; }
 }
 .iso-matrix .iso-name, .iso-matrix thead th:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); }
+/* Figure builder (figure-ui.js) */
+.dialog:has(.figure-dialog) { width: min(1200px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); }
+.fig-layout { display: grid; grid-template-columns: minmax(260px, 320px) 1fr; gap: 16px; align-items: start; }
+.fig-controls { display: flex; flex-direction: column; gap: 10px; max-height: 70dvh; overflow-y: auto; padding-right: 4px; }
+.fig-controls fieldset { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.fig-controls legend { color: var(--muted); font-size: 0.9rem; padding: 0 4px; }
+.fig-field { display: flex; flex-direction: column; gap: 3px; font-size: 0.9rem; }
+.fig-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fig-num { width: 6em; }
+.fig-color { width: 2.4em; height: 1.8em; padding: 0; border: 1px solid var(--border); }
+.fig-manual { display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto; }
+.fig-manual > div { display: flex; flex-direction: column; gap: 2px; }
+.fig-preview-wrap { position: sticky; top: 0; background: repeating-conic-gradient(var(--border) 0 25%, transparent 0 50%) 0 0 / 16px 16px; border: 1px solid var(--border); border-radius: 8px; padding: 8px; max-height: 70dvh; overflow: auto; }
+.fig-preview svg { display: block; width: 100%; height: auto; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.2); }
+@media (max-width: 760px) {
+  .fig-layout { grid-template-columns: 1fr; }
+  .fig-preview-wrap { position: static; order: -1; }
+  .fig-controls { max-height: none; }
+}
