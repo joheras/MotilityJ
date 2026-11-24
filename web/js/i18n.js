@@ -3,6 +3,7 @@
 // Placeholders: {name} is replaced by params.name.
 
 import { strings as dmStrings } from "./deepmotility/strings.js";
+import { strings as isoStrings } from "./isolates-strings.js";
 
 const en = {
   // shell
@@ -269,6 +270,7 @@ const en = {
 const LANGS = { en };
 const LANG = "en";
 Object.assign(en, dmStrings); // Deep-Motility tool (js/deepmotility/strings.js)
+Object.assign(en, isoStrings); // isolate profiles (js/isolates-strings.js)
 
 export function t(key, params) {
   let s = LANGS[LANG]?.[key] ?? en[key];

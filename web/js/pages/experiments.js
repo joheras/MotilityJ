@@ -52,6 +52,7 @@ export async function render(view) {
       h("div", null, h("h1", null, t("experiments")), h("p", { class: "muted" }, t("experimentsLead"))),
       h("div", { class: "actions" },
         h("button", { class: "primary", onclick: newExperiment }, "+ ", t("newExperiment")),
+        experiments.length ? h("a", { class: "button", href: "#/isolates", title: t("isoAllHint") }, t("isoAllTitle")) : null,
         experiments.length ? h("button", { onclick: () => backupAll(experiments), title: t("backupAllHint") }, t("backupAll")) : null,
         restoreFile,
         driveEnabled() ? h("button", { onclick: async () => { const n = await restoreFromDrive(); if (n) { toast(t("restored", { n }), "ok"); await draw(); } } }, t("driveRestore")) : null));

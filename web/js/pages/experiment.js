@@ -9,6 +9,7 @@ import { BACKUP_EXT, backupBlob, csvBlob, download, excelBlob, safeFileName, tid
 import { t } from "../i18n.js";
 import { ACCEPT, importFile, isImageFile } from "../images.js";
 import { fieldDef, isEmpty } from "../metadata.js";
+import { takeBulkEditShortcut } from "../bulk-edit-link.js";
 import { assayCard, bulkEditDialog, columnsDialog, conflictWarning, formatMeta, metaInput } from "../metadata-ui.js";
 import { requestPersistence } from "../pwa.js";
 import { seriesCard } from "../series-ui.js";
@@ -135,6 +136,7 @@ export async function render(view, { expId }, ctx) {
         h("p", { class: "muted" }, t("nImages", { n: images.length }), images.length ? ` · ${t("nAnalysed", { n: done, total: images.length })}` : "")),
       h("div", { class: "actions head-actions" },
         h("button", { class: pending ? "primary" : "", onclick: analyseAll, disabled: none }, "▶ ", analyseLabel),
+        none ? null : h("a", { class: "button iso-link", href: `#/e/${exp.id}/isolates`, title: t("isoOpenHint"), "aria-label": t("isoOpen") }, "▦", h("span", { class: "iso-link-label" }, " ", t("isoOpen"))),
         exportMenu, moreMenu));
 
     // Summary tiles: what the experiment found, and what still needs attention.
@@ -264,5 +266,11 @@ export async function render(view, { expId }, ctx) {
 
   view.classList.add("with-bottom-bar");
   await draw();
+  const shortcut = takeBulkEditShortcut(exp.id); // from the isolate profiles: images without strain / assay type
+  if (shortcut) {
+    shortcut.forEach((id) => images.some((i) => i.id === id) && selected.add(id));
+    await draw();
+    if (selected.size) bulkEdit();
+  }
   return () => urls.forEach(URL.revokeObjectURL);
 }
