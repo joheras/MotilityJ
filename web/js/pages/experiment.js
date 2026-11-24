@@ -5,7 +5,9 @@ import * as db from "../db.js";
 import { fmtNumber, h } from "../dom.js";
 import { driveEnabled, saveExperimentToDrive } from "../drive-ui.js";
 import { rowContext, visibleColumns } from "../columns.js";
-import { BACKUP_EXT, backupBlob, csvBlob, download, excelBlob, safeFileName, tidyTable } from "../export.js";
+import { buildComparison } from "../compare.js";
+import { comparisonCard } from "../compare-ui.js";
+import { BACKUP_EXT, backupBlob, comparisonTable, csvBlob, download, excelBlob, safeFileName, tidyTable } from "../export.js";
 import { t } from "../i18n.js";
 import { ACCEPT, importFile, isImageFile } from "../images.js";
 import { fieldDef, isEmpty } from "../metadata.js";
@@ -124,11 +126,13 @@ export async function render(view, { expId }, ctx) {
     const done = images.length - pending;
     const nComplete = images.filter((i) => i.result?.klass === "complete").length;
 
+    const cmp = buildComparison(images, exp, settings);
     const analyseLabel = pending ? t("analyseN", { n: pending }) : t("analyseAll");
     const none = !images.length;
     const exportMenu = menu(h("span", null, "⤓ ", t("export")), [
       { label: t("exportExcelItem"), disabled: none, onClick: () => download(excelBlob(images, exp, settings), `${safeFileName(exp.name)}.xlsx`) },
       { label: t("exportCsvItem"), disabled: none, onClick: () => download(csvBlob(tidyTable(images, exp, settings)), `${safeFileName(exp.name)}.csv`) },
+      { label: t("exportComparisonItem"), disabled: !cmp.nControls, onClick: () => download(csvBlob(comparisonTable(images, exp, settings)), `${safeFileName(exp.name)}-comparison.csv`) },
       { label: t("backupItem"), onClick: backup },
       driveEnabled() ? { label: t("driveSave"), onClick: () => saveExperimentToDrive(exp) } : null,
     ], { title: t("exportHint") });
@@ -180,7 +184,15 @@ export async function render(view, { expId }, ctx) {
 
     const cols = visibleColumns(settings);
     const warningSlot = h("div", { class: "warning-slot" }, conflictWarning(images, exp, settings));
-    const refreshWarning = () => warningSlot.replaceChildren(conflictWarning(images, exp, settings) || "");
+    // The comparison card follows metadata edits in the table (role, condition, replicates) without a full redraw.
+    const compareSlot = h("div", { class: "compare-slot" }, images.length ? comparisonCard(exp, images, settings) : null);
+    const refreshWarning = () => {
+      warningSlot.replaceChildren(conflictWarning(images, exp, settings) || "");
+      const open = compareSlot.querySelector("details")?.open;
+      const card = comparisonCard(exp, images, settings);
+      if (open) card.open = true;
+      compareSlot.replaceChildren(card);
+    };
     const selectAll = h("input", { type: "checkbox", "aria-label": t("selectAll"), checked: images.length > 0 && selected.size === images.length,
       onchange: () => { images.forEach((i) => (selectAll.checked ? selected.add(i.id) : selected.delete(i.id))); draw(); } });
     selectAll.indeterminate = selected.size > 0 && selected.size < images.length;
@@ -205,7 +217,7 @@ export async function render(view, { expId }, ctx) {
     };
 
     const rows = images.map((img) => {
-      const c = rowContext(img, exp, settings);
+      const c = rowContext(img, exp, settings, cmp);
       const box = h("input", { type: "checkbox", checked: selected.has(img.id), "aria-label": t("selectImage", { name: img.name }),
         onchange: () => { box.checked ? selected.add(img.id) : selected.delete(img.id); draw(); } });
       return h("tr", { class: selected.has(img.id) ? "selected" : null },
@@ -259,7 +271,7 @@ export async function render(view, { expId }, ctx) {
 
     view.replaceChildren(...[
       h("div", { class: "crumbs" }, h("a", { href: "#/" }, t("experiments")), " › ", exp.name),
-      head, stats, assayCard(exp, settings, saveAssay, { open: assayOpen }), addCard, results, series, gallery, bottom].filter(Boolean));
+      head, stats, assayCard(exp, settings, saveAssay, { open: assayOpen }), addCard, results, compareSlot, series, gallery, bottom].filter(Boolean));
   }
 
   async function backup() {

@@ -1,17 +1,19 @@
 // Columns of the results table and of the exports: metadata, measurements and notes of each image.
 // The results table shows a configurable subset (settings.resultColumns); the tidy export has every column.
+import { buildComparison } from "./compare.js";
 import { t } from "./i18n.js";
 import { measure } from "./measure.js";
 import { EXPERIMENT_FIELDS, IMAGE_FIELDS, effectiveMeta, fieldDef, measureSettings } from "./metadata.js";
 
-/** Context of one image row: effective metadata and measurements. */
-export function rowContext(img, exp, settings) {
+/** Context of one image row: effective metadata, measurements and, given the experiment's comparison
+ *  (compare.js buildComparison), the % inhibition vs its control. */
+export function rowContext(img, exp, settings, cmp = null) {
   const st = measureSettings(img, exp, settings);
-  return { img, exp, eff: effectiveMeta(img, exp, settings), m: measure(img, st), settings: st };
+  return { img, exp, eff: effectiveMeta(img, exp, settings), m: measure(img, st), settings: st, cmp: cmp?.perImage.get(img.id) ?? null };
 }
 
 // Columns with a long name get a short table header (short_<key> in i18n.js); the full name is its tooltip.
-const SHORT = new Set(["bioRep", "techRep", "incubationTimeH", "eqDiameterMm", "feretMaxMm", "feretMinMm", "coveragePct", "centroidOffsetMm"]);
+const SHORT = new Set(["bioRep", "techRep", "inhibitionPct", "incubationTimeH", "eqDiameterMm", "feretMaxMm", "feretMinMm", "coveragePct", "centroidOffsetMm"]);
 const header = (key, label) => () => (SHORT.has(key) ? t(`short_${key}`) : label());
 const meta = (key) => {
   const unit = fieldDef(key).unit;
@@ -25,13 +27,14 @@ const mes = (key, digits) => {
 
 /** Optional columns of the results table, in display order. */
 export const TABLE_COLUMNS = [
-  meta("strain"), meta("condition"), meta("bioRep"), meta("techRep"), meta("incubationTimeH"), meta("assayType"), meta("agarPct"),
+  meta("strain"), meta("condition"), meta("bioRep"), meta("techRep"), meta("role"), meta("incubationTimeH"), meta("assayType"), meta("agarPct"),
   mes("areaMm2", 2), mes("eqDiameterMm", 2), mes("feretMaxMm", 2), mes("feretMinMm", 2), mes("perimeterMm", 2),
   mes("circularity", 3), mes("coveragePct", 1), mes("centroidOffsetMm", 2),
+  { ...mes("inhibitionPct", 1), value: (c) => c.cmp?.inhibitionPct ?? null },
   { id: "notes", kind: "notes", label: () => t("colNotes"), header: () => t("colNotes"), value: (c) => c.img.notes || "" },
 ];
 
-export const DEFAULT_COLUMNS = ["strain", "condition", "bioRep", "areaMm2", "eqDiameterMm", "circularity", "coveragePct", "notes"];
+export const DEFAULT_COLUMNS = ["strain", "condition", "bioRep", "role", "areaMm2", "eqDiameterMm", "circularity", "coveragePct", "notes"];
 
 export function visibleColumns(settings) {
   const ids = Array.isArray(settings.resultColumns) ? settings.resultColumns : DEFAULT_COLUMNS;
@@ -44,8 +47,9 @@ const round = (v, d) => (v == null || !Number.isFinite(v) ? "" : Math.round(v * 
 export function tableRows(images, exp, settings) {
   const cols = visibleColumns(settings);
   const header = [t("colFile"), t("colClass"), ...cols.map((c) => c.label())];
+  const cmp = cols.some((c) => c.id === "inhibitionPct") ? buildComparison(images, exp, settings) : null;
   const rows = images.map((img) => {
-    const c = rowContext(img, exp, settings);
+    const c = rowContext(img, exp, settings, cmp);
     return [img.name, img.result ? img.result.klass : "", ...cols.map((col) => {
       const v = col.value(c);
       return col.num ? round(v, col.digits) : v == null ? "" : v;
@@ -71,6 +75,9 @@ const TIDY = [
   ["circularity", (c) => round(c.m?.circularity, 4)],
   ["plate_coverage_pct", (c) => round(c.m?.coveragePct, 2)],
   ["centroid_offset_mm", (c) => round(c.m?.centroidOffsetMm, 3)],
+  ["inhibition_pct", (c) => round(c.cmp?.inhibitionPct, 2)],
+  ["inhibition_measure", (c) => (c.cmp ? { eqDiameterMm: "equivalent_diameter_mm", areaMm2: "area_mm2" }[c.cmp.measure] : "")],
+  ["inhibition_control_mean", (c) => round(c.cmp?.controlMean, 3)],
   ["mm_per_px", (c) => round(c.m?.mmPerPx, 6)],
   ["scale_source", (c) => (c.m?.mmPerPx == null ? "" : c.settings.manualPxPerMm > 0 ? "manual" : "plate")],
   ["notes", (c) => c.img.notes || ""],
@@ -80,8 +87,9 @@ const TIDY = [
 export function tidyRows(groups, settings) {
   const rows = [TIDY.map(([name]) => name)];
   for (const { exp, images } of groups) {
+    const cmp = buildComparison(images, exp, settings);
     for (const img of images) {
-      const c = rowContext(img, exp, settings);
+      const c = rowContext(img, exp, settings, cmp);
       rows.push(TIDY.map(([, f]) => f(c)));
     }
   }
