@@ -80,6 +80,34 @@ const en = {
   exportCsvHint: "Tidy CSV: one row per image with all metadata and measurements",
   sheetResults: "Results", sheetTidy: "Tidy data",
 
+  // comparison vs control (compare.js, compare-ui.js)
+  meta_role: "Role", role_sample: "Sample", role_untreated: "Untreated control", role_vehicle: "Vehicle control",
+  m_inhibitionPct: "Inhibition vs control (%)", short_inhibitionPct: "Inhib. (%)",
+  sheetComparison: "Comparison", exportComparisonItem: "Comparison vs control (.csv)", exportComparisonCsv: "Comparison (.csv)",
+  comparison: "Comparison vs control",
+  cmpLead: "Each condition is compared with the control images of its group: n biological replicates, mean ± SD, % inhibition and Welch's t-test (Holm-corrected).",
+  cmpHowComputed: "How it is computed",
+  cmpHowToMark: "No control marked yet. Set the Role of your untreated or vehicle (e.g. DMSO) control plates to “Untreated control” or “Vehicle control”: in the Role column of the results table, on the review page, or for several images at once with Edit metadata. Give each treatment a Condition and each plate its biological replicate.",
+  cmpSummary: "{n} control image(s) · {m}", cmpNoControls: "no controls marked",
+  cmpMeasure: "Measure", cmp_eqDiameterMm: "Equivalent diameter (mm)", cmp_areaMm2: "Area (mm²)",
+  cmpPairing: "Compare samples with", cmp_pairing_group: "the controls of their group", cmp_pairing_global: "all the controls of the experiment",
+  cmpReference: "Reference control", cmp_reference_auto: "Vehicle if present, else untreated", cmp_reference_vehicle: "Vehicle control", cmp_reference_untreated: "Untreated control",
+  cmpGroupBy: "A group (with its own control) has the same", cmpGroupRows: "Split the conditions by",
+  allImages: "All images", group: "Group", noCondition: "(no condition)", reference: "reference",
+  nBio: "n", nTitle: "Biological replicates (plates in brackets; ▣ = complete plates)", meanSd: "Mean ± SD", ci95: "95% CI",
+  inhibitionSd: "Inhibition (%) ± SD", inhibitionHint: "(1 − mean / mean of the control) × 100; SD propagated from both SDs",
+  pHolm: "p (Holm)", pHolmHint: "Welch's t-test vs the control, Holm-corrected within the group; hover for the raw p", pRaw: "raw p",
+  lowNHint: "Fewer than 3 biological replicates", completeHint: "Complete plates: the value is the plate size, a lower bound",
+  anovaLine: "One-way ANOVA: F({d1}, {d2}) = {F}, p = {p}", anovaNa: "One-way ANOVA: not enough replicates.",
+  plateSize: "plate", plateSizeLine: "Plate size: {v} {u} (complete plates)",
+  warnLowN: "Fewer than 3 biological replicates: {list}. Tests with so few replicates have little power; add replicates before drawing conclusions.",
+  warnNoControl: "No control for {g}: its % inhibition and p-values cannot be computed. Mark a control in this group, or compare with all the controls of the experiment.",
+  warnPooled: "{g}: control images of different conditions ({c}) were pooled into one control.",
+  warnComplete: "{n} plate(s) are complete: their value is the plate size, a lower bound of the real motility, so differences to the control may be underestimated.",
+  warnBioMissing: "{c}: some images have no biological replicate; each of them counts as a separate biological replicate.",
+  warnPending: "{n} image(s) not analysed yet are left out.",
+  cmpReplicatesNote: "n = biological replicates. Plates with the same biological replicate (technical replicates) are averaged first; the dots are the biological replicates, faint dots the individual plates, squares complete plates; bars are means and error bars ± SD. Stars: * p < 0.05, ** < 0.01, *** < 0.001, **** < 0.0001 (Holm-adjusted).",
+
   // review page
   zoomIn: "Zoom in", zoomOut: "Zoom out", zoomFit: "Fit image",
   legendPlate: "Plate", legendGrowth: "Growth",
@@ -230,6 +258,24 @@ const en = {
     <li>If the images of an experiment have a different assay type, agar % or plate diameter, a warning is shown above the table.</li>
   </ul>
   <p>Metadata is stored with the experiment, included in backups and exported in the tidy CSV and Excel sheet (columns such as <code>strain</code>, <code>agar_pct</code>, <code>equivalent_diameter_mm</code>), ready for R or Python.</p>`,
+  help_compare_title: "Comparison vs control",
+  help_compare_html: `<p>Motility inhibitors (quorum-sensing inhibitors, sub-MIC antibiotics, anti-virulence compounds) are usually reported as <b>% motility inhibition</b> relative to an untreated or vehicle control, or as the <b>zone diameter, mean ± SD</b> per condition, tested across biological replicates.</p>
+  <ul>
+    <li><b>Mark the controls</b>: set the <b>Role</b> of the control plates to <i>Untreated control</i> or <i>Vehicle control</i> (e.g. DMSO); every other image is a sample. Give each treatment a <b>Condition</b> and each plate its <b>biological</b> (and, if any, technical) <b>replicate</b>. Use <b>Edit metadata</b> to set them for several images at once.</li>
+    <li><b>Pairing</b>: by default the samples are compared with the controls of their <b>group</b>, the images with the same values of the fields you tick (strain and incubation time by default), so each strain is compared with its own control. Or compare every sample with <b>all the controls</b> of the experiment. With both kinds of controls, the vehicle control is the reference and the untreated control is shown as a condition (the effect of the vehicle itself).</li>
+    <li><b>Measure</b>: the equivalent diameter (default, since most papers report zone diameters) or the area.</li>
+  </ul>
+  <p><b>Replicates.</b> The statistical unit is the <b>biological replicate</b>: plates of the same condition and biological replicate (technical replicates) are averaged first, and n is the number of biological replicates. An image without a biological replicate counts as one. Treating technical replicates as independent would inflate n and give p-values that are too small.</p>
+  <p><b>Complete plates</b> (the zone reached the rim) count as the plate size (e.g. 90 mm, or its area). This is a lower bound of the real motility: they are drawn as squares, counted in the table (▣) and warned about.</p>
+  <p><b>Formulas</b> (per condition, over its n biological replicates x<sub>i</sub>):</p>
+  <ul>
+    <li>mean x̄ = Σx<sub>i</sub>/n; SD = √(Σ(x<sub>i</sub> − x̄)²/(n − 1)); SEM = SD/√n; 95% CI = x̄ ± t<sub>0.975, n−1</sub>·SEM.</li>
+    <li><b>% inhibition</b> = (1 − x̄<sub>T</sub>/x̄<sub>C</sub>) × 100, with SD propagated to first order from both SDs: SD = 100·(x̄<sub>T</sub>/x̄<sub>C</sub>)·√((SD<sub>T</sub>/x̄<sub>T</sub>)² + (SD<sub>C</sub>/x̄<sub>C</sub>)²). Positive values mean less motility than the control. In the results table and exports each image also gets its own % inhibition against the mean of its control.</li>
+    <li><b>Welch's t-test</b> (two-sided, unequal variances) of each condition vs the control: t = (x̄<sub>T</sub> − x̄<sub>C</sub>)/√(s²<sub>T</sub>/n<sub>T</sub> + s²<sub>C</sub>/n<sub>C</sub>), with Welch–Satterthwaite degrees of freedom. It needs at least 2 replicates per condition.</li>
+    <li><b>Multiple comparisons</b>: the p-values of the conditions compared with the same control are corrected with <b>Holm's</b> step-down method (sort them, multiply the k-th smallest by m − k + 1, keep them increasing, cap at 1). It controls the family-wise error rate like Dunnett's test, without assuming equal variances or equal n; it is slightly more conservative. Stars use the corrected p.</li>
+    <li><b>One-way ANOVA</b> over the control and the conditions of each group (F, degrees of freedom and p), as an overall test.</li>
+  </ul>
+  <p>Fewer than 3 biological replicates, or a group without a control, are warned about. The t and F distributions are computed in the app (incomplete beta function) and checked against SciPy. The comparison is exported as a <b>Comparison</b> sheet of the Excel workbook and as a CSV, with all the numbers above and the replicate values.</p>`,
   help_series_title: "Time series and expansion kinetics",
   help_series_html: `<p>To measure how fast a strain spreads, photograph the <b>same plate</b> several times while it grows (for example every 30 min, or every 10 min with a scanner; a swarm usually covers a 9 cm plate in 10–20 h) and group the photos as a <b>series</b>.</p>
   <ul>

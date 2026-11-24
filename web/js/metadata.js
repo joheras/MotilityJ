@@ -3,14 +3,16 @@
 // medium, plate volume, drying time, temperature and incubation time, so these are kept with every image.
 //
 // exp.meta   = { assayType, agarPct, medium, plateVolumeMl, dryingMin, incubationTempC, incubationTimeH, plateDiameterMm }
-// image.meta = { strain, condition, bioRep, techRep, ...any experiment field as an override }
+// image.meta = { strain, condition, bioRep, techRep, role, ...any experiment field as an override }
+//   role: "sample" (or empty) | "untreated" | "vehicle" control, for the comparison vs control (compare.js)
 // Empty values are null. An image value overrides the experiment value; plateDiameterMm falls back to Settings.
 
 export const ASSAY_TYPES = ["swim", "swarm", "twitch", "other"];
+export const IMAGE_ROLES = ["sample", "untreated", "vehicle"];
 
-/** type: "select" | "number" | "text"; unit for labels and export column names. */
+/** type: "select" | "number" | "text"; unit for labels and export column names; optionKey: i18n prefix of select options. */
 export const EXPERIMENT_FIELDS = [
-  { key: "assayType", type: "select", options: ASSAY_TYPES, col: "assay_type" },
+  { key: "assayType", type: "select", options: ASSAY_TYPES, optionKey: "assay", col: "assay_type" },
   { key: "agarPct", type: "number", unit: "%", min: 0, max: 10, step: "any", col: "agar_pct" },
   { key: "medium", type: "text", col: "medium" },
   { key: "plateVolumeMl", type: "number", unit: "mL", min: 0, step: "any", col: "plate_volume_ml" },
@@ -26,6 +28,7 @@ export const IMAGE_FIELDS = [
   { key: "bioRep", type: "text", col: "biological_replicate" },
   { key: "techRep", type: "text", col: "technical_replicate" },
   { key: "incubationTimeH", type: "number", unit: "h", min: 0, step: "any", col: "incubation_time_h" },
+  { key: "role", type: "select", options: IMAGE_ROLES, optionKey: "role", col: "role" },
 ];
 
 const ALL_FIELDS = [...EXPERIMENT_FIELDS, ...IMAGE_FIELDS];

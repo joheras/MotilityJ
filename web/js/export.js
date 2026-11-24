@@ -1,8 +1,9 @@
 // Results export (CSV, Excel) and backup/restore of experiments (.motilityj.json).
 import * as db from "./db.js";
 import { tableRows, tidyRows } from "./columns.js";
+import { buildComparison, comparisonRows } from "./compare.js";
 import { t } from "./i18n.js";
-import { normalizeExperiment, normalizeImage } from "./metadata.js";
+import { fieldDef, normalizeExperiment, normalizeImage } from "./metadata.js";
 import { xlsxWorkbookBlob } from "./xlsx.js";
 
 export const BACKUP_FORMAT = "motilityj-backup";
@@ -27,6 +28,13 @@ export const resultRows = (images, exp, settings) => tableRows(images, exp, sett
 /** Tidy table of one experiment: one row per image with all metadata and measurements. */
 export const tidyTable = (images, exp, settings) => tidyRows([{ exp, images }], settings);
 
+/** Comparison vs control of one experiment: one row per condition (compare.js). Null without any control. */
+export function comparisonTable(images, exp, settings) {
+  const cmp = buildComparison(images, exp, settings);
+  if (!cmp.nControls) return null;
+  return comparisonRows(cmp, cmp.settings.groupBy.map((key) => ({ key, col: fieldDef(key).col })));
+}
+
 export function csvBlob(rows) {
   const cell = (v) => {
     const s = v == null ? "" : String(v);
@@ -36,14 +44,18 @@ export function csvBlob(rows) {
   return new Blob(["﻿" + rows.map((r) => r.map(cell).join(",")).join("\r\n") + "\r\n"], { type: "text/csv;charset=utf-8" });
 }
 
-/** Workbook with two sheets: the results as shown and the tidy data (all metadata and measurements). */
+/** Workbook: the results as shown, the tidy data (all metadata and measurements) and, when images are marked
+ *  as controls, the comparison vs control. */
 export function excelBlob(images, exp, settings) {
   const results = resultRows(images, exp, settings);
   const tidy = tidyTable(images, exp, settings);
+  const comparison = comparisonTable(images, exp, settings);
+  const widths = (rows) => rows[0].map((h) => Math.max(12, Math.min(30, h.length + 2)));
   return xlsxWorkbookBlob([
     { name: t("sheetResults"), rows: results, widths: [36, 14, ...results[0].slice(2).map(() => 16)] },
-    { name: t("sheetTidy"), rows: tidy, widths: tidy[0].map((h) => Math.max(12, Math.min(30, h.length + 2))) },
-  ]);
+    { name: t("sheetTidy"), rows: tidy, widths: widths(tidy) },
+    comparison ? { name: t("sheetComparison"), rows: comparison, widths: widths(comparison) } : null,
+  ].filter(Boolean));
 }
 
 // ------------------------------------------------------------------ backup
@@ -91,7 +103,7 @@ export async function restoreBackup(data) {
   let n = 0;
   for (const e of data.experiments) {
     const now = Date.now();
-    const exp = normalizeExperiment({ id: db.newId(), name: e.name || t("untitled"), created: e.created || now, updated: now, meta: e.meta });
+    const exp = normalizeExperiment({ id: db.newId(), name: e.name || t("untitled"), created: e.created || now, updated: now, meta: e.meta, compare: e.compare ?? null });
     await db.putExperiment(exp);
     const seriesIds = new Map(); // time series: ids of the backup -> new ids (older backups have none)
     for (const s of e.series || []) {

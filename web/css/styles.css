@@ -460,3 +460,36 @@ label.check input { width: 18px; height: 18px; margin: 0; }
   .stats, .param-grid { grid-template-columns: 1fr; }
   .ramp-legend { margin-left: 0; }
 }
+
+/* ------------------------------------------------- comparison vs control */
+.compare-card > summary { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; cursor: pointer; list-style: none; }
+.compare-card > summary::-webkit-details-marker { display: none; }
+.compare-card > summary h2 { margin: 0; }
+.compare-card > summary h2::before { content: "▸ "; color: var(--muted); }
+.compare-card[open] > summary h2::before { content: "▾ "; }
+.compare-card > * + * { margin-top: 12px; }
+.cmp-settings { display: flex; flex-direction: column; gap: 10px; }
+.cmp-selects { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.cmp-groupby { border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px 10px; display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; }
+.cmp-groupby legend { color: var(--muted); font-size: 0.85rem; padding: 0 4px; }
+.cmp-warn ul { margin: 0; padding-left: 1.2em; }
+.cmp-empty { background: var(--surface-2); border-radius: 8px; padding: 10px 14px; }
+.cmp-family { border-top: 1px solid var(--border); padding-top: 10px; }
+.cmp-family h3 { margin: 0 0 2px; font-size: 1rem; }
+.cmp-table td, .cmp-table th { white-space: nowrap; }
+.cmp-table tr.cmp-control td { background: var(--surface-2); }
+.cmp-tag { margin-left: 6px; font-size: 0.7rem; }
+.cmp-sig { font-weight: 700; color: var(--muted); }
+.cmp-sig.sig { color: var(--accent); }
+.cmp-low, .cmp-complete { color: var(--i-fg); }
+.cmp-chart { margin-top: 10px; }
+.cmp-chart .cmp-bar { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1; }
+.cmp-chart .cmp-bar.control { fill: var(--surface-2); stroke: var(--muted); }
+.cmp-chart .cmp-err { stroke: var(--text); stroke-width: 1.5; fill: none; }
+.cmp-chart .cmp-dot { fill: var(--accent); stroke: var(--surface); stroke-width: 1; }
+.cmp-chart .cmp-dot.complete { fill: var(--surface); stroke: var(--i-fg); stroke-width: 2; }
+.cmp-chart .cmp-plate { fill: var(--muted); fill-opacity: 0.45; }
+.cmp-chart .cmp-stars { fill: var(--text); font-size: 13px; font-weight: 700; }
+@media (max-width: 560px) {
+  .compare-card .table-wrap { display: block; }
+}

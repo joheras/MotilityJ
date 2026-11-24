@@ -8,10 +8,13 @@ import { modal } from "./ui.js";
 
 export const fieldLabel = (def) => t(`meta_${def.key}`);
 
-/** Display text of a metadata value (assay types translated). */
+const optionLabel = (def, o) => t(`${def.optionKey || "assay"}_${o}`);
+
+/** Display text of a metadata value (select options translated). */
 export function formatMeta(key, v) {
   if (isEmpty(v)) return "";
-  if (key === "assayType") return t(`assay_${v}`);
+  const def = fieldDef(key);
+  if (def?.type === "select") return optionLabel(def, v);
   return typeof v === "number" ? v.toLocaleString(undefined, { maximumFractionDigits: 4 }) : String(v);
 }
 
@@ -21,7 +24,7 @@ export function metaInput(def, value, { placeholder = "", onChange = null, class
   if (def.type === "select") {
     el = h("select", { class: className },
       h("option", { value: "" }, placeholder ? `${t("inherit")}: ${placeholder}` : "—"),
-      def.options.map((o) => h("option", { value: o, selected: value === o }, t(`assay_${o}`))));
+      def.options.map((o) => h("option", { value: o, selected: value === o }, optionLabel(def, o))));
   } else {
     el = h("input", { class: className, type: "text", inputmode: def.type === "number" ? "decimal" : null,
       value: isEmpty(value) ? "" : String(value), placeholder, maxlength: 200, autocomplete: "off" });
