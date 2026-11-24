@@ -4,6 +4,7 @@
 import { analyseImages } from "../analyze.js";
 import * as db from "../db.js";
 import { fmtNumber, h, s } from "../dom.js";
+import { figureDialog } from "../figure-ui.js";
 import { t } from "../i18n.js";
 import { applyTransform, computeKinetics, orderFrames, plateTransform, rampColor, seriesParams } from "../series.js";
 import { applyTimes, downloadKinetics, imagePicker } from "../series-ui.js";
@@ -44,6 +45,7 @@ export async function render(view, { expId, seriesId }, ctx) {
       h("div", { class: "actions" },
         h("button", { onclick: () => downloadKinetics([{ series, images: frames }], settings, `${exp.name}-${series.name}`, "xlsx"), disabled: !frames.length }, t("kineticsExcel")),
         h("button", { onclick: () => downloadKinetics([{ series, images: frames }], settings, `${exp.name}-${series.name}`, "csv"), disabled: !frames.length }, t("kineticsCsv")),
+        h("button", { onclick: run(() => figureDialog(exp, frames, settings, { series })), disabled: !frames.some((f) => f.result) }, t("figSeriesButton")),
         h("button", { onclick: run(async () => {
           const name = await promptDialog(t("renameSeries"), series.name, { ok: t("rename"), label: t("name") });
           if (name && name !== series.name) { series.name = name; await db.putSeries(series); await draw(); }

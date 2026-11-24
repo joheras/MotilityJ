@@ -6,6 +6,7 @@ import { fmtNumber, h } from "../dom.js";
 import { driveEnabled, importFromInbox, saveExperimentToDrive } from "../drive-ui.js";
 import { rowContext, visibleColumns } from "../columns.js";
 import { BACKUP_EXT, backupBlob, csvBlob, download, excelBlob, safeFileName, tidyTable } from "../export.js";
+import { figureDialog } from "../figure-ui.js";
 import { t } from "../i18n.js";
 import { ACCEPT, importFile, isImageFile } from "../images.js";
 import { fieldDef, isEmpty } from "../metadata.js";
@@ -122,6 +123,7 @@ export async function render(view, { expId }, ctx) {
     const exportMenu = menu(h("span", null, "⤓ ", t("export")), [
       { label: t("exportExcelItem"), disabled: none, onClick: () => download(excelBlob(images, exp, settings), `${safeFileName(exp.name)}.xlsx`) },
       { label: t("exportCsvItem"), disabled: none, onClick: () => download(csvBlob(tidyTable(images, exp, settings)), `${safeFileName(exp.name)}.csv`) },
+      { label: t("figItem"), disabled: !done, onClick: () => figureDialog(exp, images, settings) },
       { label: t("backupItem"), onClick: backup },
       driveEnabled() ? { label: t("driveSave"), onClick: () => saveExperimentToDrive(exp) } : null,
     ], { title: t("exportHint") });
