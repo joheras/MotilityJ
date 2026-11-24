@@ -1,5 +1,5 @@
 // Experiment page: add images (dropzone, file picker, camera), assay conditions, thumbnails, results table
-// (configurable columns, inline and bulk metadata editing), analyse all, export.
+// (configurable columns, inline and bulk metadata editing), motility phenotype rules, analyse all, export.
 import { analyseImages } from "../analyze.js";
 import * as db from "../db.js";
 import { fmtNumber, h } from "../dom.js";
@@ -10,6 +10,8 @@ import { t } from "../i18n.js";
 import { ACCEPT, importFile, isImageFile } from "../images.js";
 import { fieldDef, isEmpty } from "../metadata.js";
 import { assayCard, bulkEditDialog, columnsDialog, conflictWarning, formatMeta, metaInput } from "../metadata-ui.js";
+import { classifyImages } from "../phenotype.js";
+import { phenotypeBadge, phenotypeCard, phenotypeWarning, ratioText } from "../phenotype-ui.js";
 import { requestPersistence } from "../pwa.js";
 import { seriesCard } from "../series-ui.js";
 import { needsReview, overlayThumb } from "../thumbs.js";
@@ -83,6 +85,13 @@ export async function render(view, { expId }, ctx) {
     await draw({ assayOpen: true });
   }
 
+  async function savePhenotypeRules(ids) {
+    exp.phenotypeRules = ids;
+    exp.updated = Date.now();
+    try { await db.putExperiment(exp); toast(t("phSaved"), "ok"); } catch (e) { showError(e); }
+    await draw({ phenotypeOpen: true });
+  }
+
   async function bulkEdit() {
     const list = images.filter((i) => selected.has(i.id));
     if (!list.length) return;
@@ -108,7 +117,7 @@ export async function render(view, { expId }, ctx) {
   const camera = () => fileButton(h("span", null, "📷 ", t("takePhoto")), { accept: "image/*", capture: "environment", className: "button primary camera-button", onFiles: addFiles });
   const chooser = (cls = "button") => fileButton(t("chooseFiles"), { accept: ACCEPT, multiple: true, className: cls, onFiles: addFiles });
 
-  async function draw({ assayOpen = false } = {}) {
+  async function draw({ assayOpen = false, phenotypeOpen = false } = {}) {
     images = await db.listImages(exp.id);
     for (const id of [...selected]) if (!images.some((i) => i.id === id)) selected.delete(id);
     urls.splice(0).forEach(URL.revokeObjectURL);
@@ -171,14 +180,36 @@ export async function render(view, { expId }, ctx) {
         h("span", { class: "thumb-badges" }, classBadge(img.result), reviewBadge(img.result)));
     });
 
-    const cols = visibleColumns(settings);
-    const warningSlot = h("div", { class: "warning-slot" }, conflictWarning(images, exp, settings));
-    const refreshWarning = () => warningSlot.replaceChildren(conflictWarning(images, exp, settings) || "");
+    const cols = visibleColumns(settings, exp);
+    let phenotypes = classifyImages(images, exp, settings);
+    const phCells = new Map(); // image id -> { badge, ratio } cells, refreshed in place after inline metadata edits
+    const warnings = () => [conflictWarning(images, exp, settings), phenotypeWarning(images, exp, settings, phenotypes)].filter(Boolean);
+    const warningSlot = h("div", { class: "warning-slot" }, warnings());
+    const phSlot = h("div");
+    const drawPhenotypeCard = (open = phSlot.querySelector("details")?.open ?? phenotypeOpen) =>
+      phSlot.replaceChildren(phenotypeCard(exp, images, settings, phenotypes, savePhenotypeRules, { open }));
+    const refreshWarning = () => {
+      phenotypes = classifyImages(images, exp, settings);
+      for (const [id, td] of phCells) {
+        const p = phenotypes.get(id);
+        td.badge?.replaceChildren(phenotypeBadge(p, settings) || "");
+        td.ratio?.replaceChildren(ratioText(p));
+      }
+      drawPhenotypeCard();
+      warningSlot.replaceChildren(...warnings());
+    };
+    drawPhenotypeCard();
     const selectAll = h("input", { type: "checkbox", "aria-label": t("selectAll"), checked: images.length > 0 && selected.size === images.length,
       onchange: () => { images.forEach((i) => (selectAll.checked ? selected.add(i.id) : selected.delete(i.id))); draw(); } });
     selectAll.indeterminate = selected.size > 0 && selected.size < images.length;
 
     const cell = (img, c, col) => {
+      if (col.kind === "phenotype" || col.kind === "phenotypeRatio") {
+        const ratio = col.kind === "phenotypeRatio";
+        const td = h("td", { class: ratio ? "num" : "ph-cell" }, ratio ? ratioText(c.ph) : phenotypeBadge(c.ph, settings));
+        phCells.set(img.id, { ...phCells.get(img.id), [ratio ? "ratio" : "badge"]: td });
+        return td;
+      }
       if (col.kind === "notes") {
         const notes = h("input", { class: "notes-input", value: img.notes || "", placeholder: t("addNote"), "aria-label": t("colNotes"),
           onchange: async () => { img.notes = notes.value; await db.putImage(img); } });
@@ -198,7 +229,7 @@ export async function render(view, { expId }, ctx) {
     };
 
     const rows = images.map((img) => {
-      const c = rowContext(img, exp, settings);
+      const c = rowContext(img, exp, settings, phenotypes);
       const box = h("input", { type: "checkbox", checked: selected.has(img.id), "aria-label": t("selectImage", { name: img.name }),
         onchange: () => { box.checked ? selected.add(img.id) : selected.delete(img.id); draw(); } });
       return h("tr", { class: selected.has(img.id) ? "selected" : null },
@@ -218,7 +249,7 @@ export async function render(view, { expId }, ctx) {
       return h("li", null, h("a", { href: `#/e/${exp.id}/i/${img.id}` },
         overlayThumb(img, urls[i], { className: "thumb-frame small" }),
         h("span", { class: "rl-main" }, h("span", { class: "rl-name" }, img.name),
-          h("span", { class: "thumb-badges" }, classBadge(img.result), reviewBadge(img.result))),
+          h("span", { class: "thumb-badges" }, classBadge(img.result), reviewBadge(img.result), phenotypeBadge(phenotypes.get(img.id), settings))),
         h("span", { class: "rl-area num" }, m?.areaMm2 != null ? h("span", null, fmtNumber(m.areaMm2, 1), h("small", null, " mm²")) : "")));
     }));
 
@@ -252,7 +283,7 @@ export async function render(view, { expId }, ctx) {
 
     view.replaceChildren(...[
       h("div", { class: "crumbs" }, h("a", { href: "#/" }, t("experiments")), " › ", exp.name),
-      head, stats, assayCard(exp, settings, saveAssay, { open: assayOpen }), addCard, results, series, gallery, bottom].filter(Boolean));
+      head, stats, assayCard(exp, settings, saveAssay, { open: assayOpen }), phSlot, addCard, results, series, gallery, bottom].filter(Boolean));
   }
 
   async function backup() {

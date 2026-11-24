@@ -1,9 +1,10 @@
-// Settings: plate diameter, optional manual scale, storage.
+// Settings: plate diameter, optional manual scale, analyzer, phenotype rule sets, storage.
 import * as db from "../db.js";
 import { h } from "../dom.js";
 import { t } from "../i18n.js";
 import { isPersisted, requestPersistence } from "../pwa.js";
 import { analyzerSection } from "../deepmotility/settings-section.js";
+import { phenotypeSettingsSection } from "../phenotype-ui.js";
 import { confirmDialog, showError, toast } from "../ui.js";
 
 export async function render(view, _params, ctx) {
@@ -48,5 +49,5 @@ export async function render(view, _params, ctx) {
         }
       } }, t("deleteAll"))));
 
-  view.replaceChildren(h("div", { class: "page-head" }, h("h1", null, t("settings"))), h("div", { class: "settings-page" }, form, await analyzerSection(ctx), storage));
+  view.replaceChildren(h("div", { class: "page-head" }, h("h1", null, t("settings"))), h("div", { class: "settings-page" }, form, await analyzerSection(ctx), phenotypeSettingsSection(ctx), storage));
 }
